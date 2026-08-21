@@ -203,9 +203,21 @@ export default function MemberUpload({
 
   const [submissionReceipt, setSubmissionReceipt] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [successModal, setSuccessModal] = useState(null)
   const [activeTab, setActiveTab] = useState('upload')
 
   const inputRef = useRef(null)
+
+  // Listen for Escape key to close success modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && successModal) {
+        setSuccessModal(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [successModal])
 
   // Optional: fetch live corporate options if optionsUrl is provided in .NET
   useEffect(() => {
@@ -301,12 +313,10 @@ export default function MemberUpload({
 
       const defaultRoleFilename =
         resolvedRole === 'broker'
-          ? `broker_broker_id_${defaultBrokerId}_${Date.now()}.xlsx`
-          : `hr_corp_id_${defaultCorpId}_${Date.now()}.xlsx`
+          ? 'partner-template.xlsx'
+          : 'corporate-template.xlsx'
 
-      const filename = rawHeaderFilename && !rawHeaderFilename.includes('template.xlsx')
-        ? rawHeaderFilename
-        : defaultRoleFilename
+      const filename = rawHeaderFilename || defaultRoleFilename
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -434,16 +444,23 @@ export default function MemberUpload({
       }
 
       const submissionUuid = data.uuid || data.id || `SUB-${Date.now()}`
-      setSubmissionReceipt({
+
+      // Trigger soothing success modal
+      setSuccessModal({
         uuid: submissionUuid,
         fileName: file.name,
         rowCount: validationSummary?.acceptedRows || 0,
-        submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'Pending Broker Review',
       })
-      setSubmitSuccess(true)
-      setMessage(`File successfully submitted to Broker! (Reference ID: ${submissionUuid})`)
-      setMessageType('success')
+
+      // Revert view to clean default stage
+      setFile(null)
+      setValidationSummary(null)
+      setValidationResult(null)
+      setValidationPassed(false)
+      setSubmitSuccess(false)
+      setSubmissionReceipt(null)
+      setMessage('')
+      if (inputRef.current) inputRef.current.value = ''
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to submit file to S3. Please try again.')
       setMessageType('error')
@@ -628,40 +645,68 @@ export default function MemberUpload({
                 </div>
               )}
 
-              {/* Submission Receipt Pill */}
-              {submitSuccess && submissionReceipt && (
-                <div className="submission-receipt-card" role="status">
-                  <div className="receipt-header">
-                    <div className="receipt-icon">
-                      <CheckCircleIcon size={20} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 className="receipt-title">File Submitted to Broker Queue</h4>
-                      <p className="receipt-subtitle">
-                        The spreadsheet has been stored in S3 and queued for broker download and review.
-                      </p>
-                    </div>
+              {/* Soothing & Snappy Success Modal Dialog */}
+              {successModal && (
+                <div
+                  className="success-modal-overlay"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="success-modal-title"
+                  onClick={() => setSuccessModal(null)}
+                >
+                  <div
+                    className="success-modal-card"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       type="button"
-                      className="receipt-view-history-btn"
-                      onClick={() => setActiveTab('history')}
+                      className="modal-close-icon-btn"
+                      onClick={() => setSuccessModal(null)}
+                      title="Close"
                     >
-                      <ClockIcon size={14} />
-                      <span>View in History →</span>
+                      ×
                     </button>
-                  </div>
-                  <div className="receipt-details">
-                    <div className="receipt-field">
-                      <span className="receipt-label">REFERENCE ID</span>
-                      <span className="receipt-value mono">{submissionReceipt.uuid}</span>
+
+                    <div className="success-modal-icon">
+                      <CheckCircleIcon size={30} />
                     </div>
-                    <div className="receipt-field">
-                      <span className="receipt-label">ROWS</span>
-                      <span className="receipt-value">{submissionReceipt.rowCount} Members</span>
+
+                    <h3 id="success-modal-title" className="success-modal-title">
+                      File Submitted Successfully!
+                    </h3>
+
+                    <p className="success-modal-desc">
+                      Your spreadsheet has been uploaded to S3 and queued for broker review.
+                    </p>
+
+                    <div className="success-modal-ref-card">
+                      <div className="ref-card-meta" style={{ justifyContent: 'center' }}>
+                        <span className="meta-pill">📄 {successModal.fileName}</span>
+                        <span className="meta-pill">
+                          👥 {successModal.rowCount} member{successModal.rowCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="receipt-field">
-                      <span className="receipt-label">STATUS</span>
-                      <span className="receipt-badge-pending">Pending Review</span>
+
+                    <div className="success-modal-actions">
+                      <button
+                        type="button"
+                        className="modal-btn-secondary"
+                        onClick={() => setSuccessModal(null)}
+                      >
+                        Upload Another File
+                      </button>
+                      <button
+                        type="button"
+                        className="modal-btn-primary"
+                        onClick={() => {
+                          setSuccessModal(null)
+                          setActiveTab('history')
+                        }}
+                      >
+                        <ClockIcon size={14} />
+                        <span>View in Past Uploads →</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -677,7 +722,7 @@ export default function MemberUpload({
                 corporates={corporates}
                 role={resolvedRole}
                 apiConfig={apiConfig}
-                refreshTrigger={submissionReceipt?.uuid}
+                refreshTrigger={successModal?.uuid || submissionReceipt?.uuid}
                 onNavigateToUpload={() => setActiveTab('upload')}
               />
             </div>
