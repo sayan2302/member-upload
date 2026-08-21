@@ -34,9 +34,18 @@ const viewContent = `@model Site.Models.CorporateConfigModel
     }
     else
     {
-        string cName = Model != null && Model.CorporateConfig != null && !string.IsNullOrEmpty(Model.CorporateConfig.CorpName)
-            ? Model.CorporateConfig.CorpName
-            : "Corporate";
+        string cName = "Corporate";
+        if (Model != null && Model.CorporateConfig != null)
+        {
+            if (Model.CorporateConfig.AddDetail != null && !string.IsNullOrEmpty(Model.CorporateConfig.AddDetail.DisplayName))
+            {
+                cName = Model.CorporateConfig.AddDetail.DisplayName;
+            }
+            else if (!string.IsNullOrEmpty(Model.CorporateConfig.ShortName))
+            {
+                cName = Model.CorporateConfig.ShortName;
+            }
+        }
         corpList.Add(new { id = corpId.ToString(), name = cName });
     }
     string corpJson = Newtonsoft.Json.JsonConvert.SerializeObject(corpList);
@@ -82,4 +91,4 @@ else
 `
 
 fs.writeFileSync(viewPath, viewContent, 'utf8')
-console.log('[OK] Updated BulkMemberPolicyUpload.cshtml with cache-busting ticks')
+console.log('[OK] Updated BulkMemberPolicyUpload.cshtml with correct CorporateConfig property access')

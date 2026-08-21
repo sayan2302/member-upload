@@ -270,7 +270,23 @@ export default function MemberUpload({
     setMessage('')
 
     try {
-      const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?for=${resolvedRole === 'broker' ? 'broker' : 'hr'}`
+      const validSubCorpIds = Array.isArray(corporates)
+        ? corporates.map((c) => c.id).filter((id) => id && id !== '0' && id !== 0)
+        : []
+
+      const params = new URLSearchParams()
+      params.set('for', resolvedRole === 'broker' ? 'broker' : 'hr')
+      if (defaultCorpId && defaultCorpId !== '0') {
+        params.set('corp_id', defaultCorpId)
+      }
+      if (Array.isArray(corporates) && corporates.length > 0) {
+        params.set('corporates', JSON.stringify(corporates))
+      }
+      if (validSubCorpIds.length > 0) {
+        params.set('sub_corporate_ids', JSON.stringify(validSubCorpIds))
+      }
+
+      const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?${params.toString()}`
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: { 'x-api-key': apiConfig.apiKey },
