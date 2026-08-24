@@ -116,7 +116,6 @@ export function CorporatePolicySelector({
 
               <div className="chip-body">
                 <span className="chip-name">{corp.name}</span>
-                <span className="chip-id">ID: {corp.id}</span>
               </div>
 
               <div className="chip-action">

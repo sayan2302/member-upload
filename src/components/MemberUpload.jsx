@@ -2,6 +2,8 @@ import { Component, useEffect, useMemo, useRef, useState } from 'react'
 import { getApiConfig } from './apiConfig.js'
 import { CorporatePolicySelector } from './CorporatePolicySelector.jsx'
 import { UploadHistory } from './UploadHistory.jsx'
+import { BrokerDashboard } from './BrokerDashboard.jsx'
+import { BrokerUploadModal } from './BrokerUploadModal.jsx'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -11,6 +13,9 @@ import {
   AlertTriangleIcon,
   SendIcon,
   ClockIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  LayersIcon,
 } from './Icons.jsx'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -30,7 +35,7 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-class ValidationPreviewBoundary extends Component {
+export class ValidationPreviewBoundary extends Component {
   constructor(props) {
     super(props)
     this.state = { hasError: false }
@@ -58,8 +63,28 @@ class ValidationPreviewBoundary extends Component {
   }
 }
 
-function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) {
+export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) {
   const [visibleRowCount, setVisibleRowCount] = useState(75)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden'
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          setIsFullscreen(false)
+        }
+      }
+      window.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.body.style.overflow = ''
+        window.removeEventListener('keydown', handleKeyDown)
+      }
+    } else {
+      document.body.style.overflow = ''
+    }
+  }, [isFullscreen])
+
   const { rows, errorRows, columns } = useMemo(() => {
     const acceptedRows = Array.isArray(result?.acceptedRows) ? result.acceptedRows : []
     const rejectedRows = Array.isArray(result?.rejectedRows) ? result.rejectedRows : []
@@ -86,10 +111,15 @@ function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) {
   }
 
   return (
-    <section className="validation-panel" aria-label="Validation results">
+    <section className={`validation-panel ${isFullscreen ? 'is-fullscreen' : ''}`} aria-label="Validation results">
       <div className="validation-panel-header">
         <div>
-          <h2>Interactive Worksheet Preview</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2>Interactive Worksheet Preview</h2>
+            {isFullscreen && (
+              <span className="fullscreen-esc-hint">Press <strong>ESC</strong> to exit</span>
+            )}
+          </div>
           <p>
             {rows.length} rows checked &nbsp;•&nbsp;{' '}
             <span style={{ color: errorRows.length > 0 ? '#e11d48' : '#059669', fontWeight: 600 }}>
@@ -98,14 +128,28 @@ function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) {
             &nbsp;•&nbsp; Showing {displayedRows.length} rows
           </p>
         </div>
-        <label className="error-filter">
-          <input
-            type="checkbox"
-            checked={errorsOnly}
-            onChange={(event) => onErrorsOnlyChange(event.target.checked)}
-          />
-          Show rows with errors only
-        </label>
+        
+        <div className="validation-header-controls">
+          <label className="error-filter">
+            <input
+              type="checkbox"
+              checked={errorsOnly}
+              onChange={(event) => onErrorsOnlyChange(event.target.checked)}
+            />
+            Show rows with errors only
+          </label>
+
+          <button
+            type="button"
+            className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+          >
+            {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="worksheet-scroll">
@@ -204,7 +248,11 @@ export default function MemberUpload({
   const [submissionReceipt, setSubmissionReceipt] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [successModal, setSuccessModal] = useState(null)
-  const [activeTab, setActiveTab] = useState('upload')
+  const [activeTab, setActiveTab] = useState(resolvedRole === 'broker' ? 'dashboard' : 'upload')
+  const [brokerTargetItem, setBrokerTargetItem] = useState(null)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [progressState, setProgressState] = useState(null)
+  const [currentFileUuid, setCurrentFileUuid] = useState(null)
 
   const inputRef = useRef(null)
 
@@ -274,6 +322,7 @@ export default function MemberUpload({
     setSubmitSuccess(false)
     setSubmissionReceipt(null)
     setMessage('')
+    if (resolvedRole !== 'broker') setBrokerTargetItem(null)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -313,39 +362,27 @@ export default function MemberUpload({
 
       const defaultRoleFilename =
         resolvedRole === 'broker'
-          ? 'partner-template.xlsx'
-          : 'corporate-template.xlsx'
-
-      const filename = rawHeaderFilename || defaultRoleFilename
-
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      setMessage('Unable to download the template. Please try again.')
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setMessage('Unable to download template. Please try again.')
       setMessageType('error')
-      console.error(error)
     } finally {
       setIsDownloading(false)
     }
   }
 
   const validateFile = async () => {
-    if (!file) {
-      setMessage('Please select a file to validate.')
-      setMessageType('error')
-      return
-    }
-
+    if (!file) return
     setIsValidating(true)
     setMessage('')
-    setSubmitSuccess(false)
-    setSubmissionReceipt(null)
+    setProgressState(null)
 
     try {
       const formData = new FormData()
@@ -353,28 +390,36 @@ export default function MemberUpload({
       formData.append('isRetailPolicy', 'false')
       formData.append('role', resolvedRole)
       formData.append('isBroker', resolvedRole === 'broker' ? 'true' : 'false')
-      formData.append('provider_corp_id', defaultProviderCorpId)
+      const isGroupHr = resolvedRole === 'hr' && Array.isArray(corporates) && corporates.length > 1;
+      formData.append('is_group', isGroupHr ? 'true' : 'false')
+      formData.append('is_group_hr', isGroupHr ? 'true' : 'false')
       formData.append('corp_id', defaultCorpId)
-
-      const subCorps = Array.isArray(corporates) ? corporates : []
-      formData.append('sub_corporates', JSON.stringify(subCorps))
-      formData.append('sub_corporate_names', JSON.stringify(subCorps.map((c) => c.name)))
-      formData.append('sub_corporate_ids', JSON.stringify(subCorps.map((c) => c.id)))
-
-      if (resolvedRole === 'broker') {
-        formData.append('broker_id', defaultBrokerId)
+      formData.append('provider_corp_id', defaultProviderCorpId)
+      formData.append('broker_id', defaultBrokerId)
+      if (currentFileUuid) {
+        formData.append('file_uuid', currentFileUuid)
+        formData.append('uuid', currentFileUuid)
       }
+      formData.append('sub_corporates', JSON.stringify(corporates))
+      formData.append('sub_corporate_names', JSON.stringify(corporates.map((c) => c.name)))
+      formData.append('sub_corporate_ids', JSON.stringify(corporates.map((c) => c.id)))
 
       const response = await fetch(`${apiConfig.apiBaseUrl}/validate/preview`, {
         method: 'POST',
-        headers: { 'x-api-key': apiConfig.apiKey },
+        headers: { 
+          'x-api-key': apiConfig.apiKey,
+          'x-user-id': String(defaultBrokerId),
+        },
         body: formData,
       })
 
       const data = await response.json().catch(() => ({}))
-
       if (!response.ok) {
         throw new Error(data.detail || data.error || `Validation failed (${response.status})`)
+      }
+
+      if (data.uuid || data.file_uuid) {
+        setCurrentFileUuid(data.uuid || data.file_uuid)
       }
 
       const acceptedRows = Array.isArray(data.acceptedRows) ? data.acceptedRows : []
@@ -394,19 +439,18 @@ export default function MemberUpload({
       setValidationPassed(isClean)
 
       if (isClean) {
-        setMessage('All records validated successfully. You can now submit this file to the broker.')
+        setMessage('All records passed validation. You can now submit this file.')
         setMessageType('success')
       } else {
-        setMessage(`Found issues in ${rejectedCount} row${rejectedCount === 1 ? '' : 's'}. Review the preview below, correct your spreadsheet, and re-upload.`)
+        setMessage(`Validation found issues in ${rejectedCount} row(s). Please review and correct them.`)
         setMessageType('error')
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to validate the file. Please verify format and try again.')
+      setMessage(error instanceof Error ? error.message : 'Unable to validate the file. Please check file format.')
       setMessageType('error')
       setValidationPassed(false)
       setValidationSummary(null)
       setValidationResult(null)
-      console.error(error)
     } finally {
       setIsValidating(false)
     }
@@ -420,37 +464,136 @@ export default function MemberUpload({
     setMessage('')
 
     try {
+      const isGroupHr = resolvedRole === 'hr' && Array.isArray(corporates) && corporates.length > 1;
       const formData = new FormData()
       formData.append('file', file)
       formData.append('role', resolvedRole)
+      formData.append('is_group', isGroupHr ? 'true' : 'false')
+      formData.append('is_group_hr', isGroupHr ? 'true' : 'false')
       formData.append('provider_corp_id', defaultProviderCorpId)
       formData.append('corp_id', defaultCorpId)
+      if (currentFileUuid) {
+        formData.append('uuid', currentFileUuid)
+        formData.append('file_uuid', currentFileUuid)
+      }
       formData.append('sub_corporates', JSON.stringify(corporates))
       formData.append('template_type', resolvedRole === 'broker' ? 'broker' : 'hr')
       formData.append('no_of_rows', String(validationSummary?.totalRows || 0))
       formData.append('valid_rows', String(validationSummary?.acceptedRows || 0))
       formData.append('invalid_rows', '0')
-      formData.append('status', 'pending')
+      formData.append('status', resolvedRole === 'broker' ? 'approved' : 'pending')
 
-      const response = await fetch(`${apiConfig.apiBaseUrl}/uploads3`, {
-        method: 'POST',
-        headers: { 'x-api-key': apiConfig.apiKey },
-        body: formData,
-      })
+      if (resolvedRole === 'broker') {
+        setProgressState({ stage: 'uploading', message: 'Uploading file to S3...', percent: 10 })
 
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(data.detail || data.error || `Submission failed (${response.status})`)
+        const response = await fetch(`${apiConfig.apiBaseUrl}/uploads3`, {
+          method: 'POST',
+          headers: { 
+            'x-api-key': apiConfig.apiKey,
+            'x-user-id': String(defaultBrokerId)
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.detail || errorData.error || `Submission failed (${response.status})`)
+        }
+
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let streamBuffer = ''
+        let finalSuccessPayload = null
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            streamBuffer += decoder.decode(value, { stream: true })
+            const blocks = streamBuffer.split('\n\n')
+            streamBuffer = blocks.pop() || ''
+
+            for (const block of blocks) {
+              const trimmed = block.trim()
+              if (!trimmed.startsWith('data:')) continue
+              const jsonText = trimmed.replace(/^data:\s*/, '')
+              try {
+                const data = JSON.parse(jsonText)
+                if (data.stage === 'uploading') {
+                  setProgressState({ stage: 'uploading', message: data.message || 'Uploading to S3...', percent: 20 })
+                } else if (data.stage === 'uploaded') {
+                  setProgressState({ stage: 'uploaded', message: data.message || 'File saved to S3', percent: 35 })
+                } else if (data.stage === 'parsing') {
+                  setProgressState({ stage: 'parsing', message: data.message || 'Parsing Excel workbook...', percent: 50 })
+                } else if (data.stage === 'transforming') {
+                  setProgressState({ stage: 'transforming', message: data.message || 'Preparing records...', percent: 65 })
+                } else if (data.stage === 'inserting' || data.stage === 'progress') {
+                  const total = data.total || validationSummary?.acceptedRows || 1
+                  const inserted = data.inserted || 0
+                  const calculatedPercent = 65 + Math.round((inserted / total) * 32)
+                  setProgressState({
+                    stage: 'inserting',
+                    message: data.message || `Inserting records into database (${inserted}/${total})...`,
+                    percent: Math.min(calculatedPercent, 97),
+                    inserted,
+                    total,
+                  })
+                } else if (data.stage === 'complete') {
+                  finalSuccessPayload = data
+                  setProgressState({
+                    stage: 'complete',
+                    message: data.message || `Successfully processed and inserted ${data.records_inserted} member records!`,
+                    percent: 100,
+                    records_inserted: data.records_inserted,
+                  })
+                } else if (data.stage === 'error') {
+                  throw new Error(data.message || 'Database ingestion failed on the server.')
+                }
+              } catch (err) {
+                if (err.message && !err.message.includes('JSON')) {
+                  throw err
+                }
+              }
+            }
+          }
+        }
+
+        const submissionUuid = finalSuccessPayload?.uuid || `SUB-${Date.now()}`
+        const finalCount = finalSuccessPayload?.records_inserted ?? validationSummary?.acceptedRows ?? 0
+
+        setSuccessModal({
+          uuid: submissionUuid,
+          fileName: file.name,
+          rowCount: finalCount,
+        })
+
+        // Auto-refresh the submissions table in Container 2
+        setHistoryRefreshKey((k) => k + 1)
+      } else {
+        // HR standard fast submission
+        const response = await fetch(`${apiConfig.apiBaseUrl}/uploads3`, {
+          method: 'POST',
+          headers: { 
+            'x-api-key': apiConfig.apiKey,
+          },
+          body: formData,
+        })
+
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(data.detail || data.error || `Submission failed (${response.status})`)
+        }
+
+        const submissionUuid = data.uuid || data.id || `SUB-${Date.now()}`
+
+        setSuccessModal({
+          uuid: submissionUuid,
+          fileName: file.name,
+          rowCount: validationSummary?.acceptedRows || 0,
+        })
+
+        setHistoryRefreshKey((k) => k + 1)
       }
-
-      const submissionUuid = data.uuid || data.id || `SUB-${Date.now()}`
-
-      // Trigger soothing success modal
-      setSuccessModal({
-        uuid: submissionUuid,
-        fileName: file.name,
-        rowCount: validationSummary?.acceptedRows || 0,
-      })
 
       // Revert view to clean default stage
       setFile(null)
@@ -460,10 +603,12 @@ export default function MemberUpload({
       setSubmitSuccess(false)
       setSubmissionReceipt(null)
       setMessage('')
+      setProgressState(null)
       if (inputRef.current) inputRef.current.value = ''
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to submit file to S3. Please try again.')
       setMessageType('error')
+      setProgressState(null)
       console.error(error)
     } finally {
       setIsSubmitting(false)
@@ -480,7 +625,9 @@ export default function MemberUpload({
             <div>
               <h2 className="upload-section-title">Member Data Upload</h2>
               <p className="upload-section-subtitle">
-                Upload your completed Excel workbook to run instant validation checks before final submission to broker.
+                {resolvedRole === 'broker' 
+                  ? 'Upload a revised Excel workbook to submit corrections for the selected HR file.'
+                  : 'Upload your completed Excel workbook to run instant validation checks before final submission to broker.'}
               </p>
             </div>
           </div>
@@ -490,34 +637,36 @@ export default function MemberUpload({
             corporates={corporates}
           />
 
-          {/* Modern Navigation Tabs */}
-          <div className="upload-tabs-container">
-            <div className="upload-tabs" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'upload'}
-                className={`upload-tab-btn ${activeTab === 'upload' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('upload')}
-              >
-                <UploadCloudIcon size={16} />
-                <span>Upload & Validate</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'history'}
-                className={`upload-tab-btn ${activeTab === 'history' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('history')}
-              >
-                <ClockIcon size={16} />
-                <span>Past Uploads</span>
-              </button>
+          {/* Modern Navigation Tabs (HR Only) */}
+          {resolvedRole !== 'broker' && (
+            <div className="upload-tabs-container">
+              <div className="upload-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'upload'}
+                  className={`upload-tab-btn ${activeTab === 'upload' ? 'is-active' : ''}`}
+                  onClick={() => setActiveTab('upload')}
+                >
+                  <UploadCloudIcon size={16} />
+                  <span>Upload & Validate</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'history'}
+                  className={`upload-tab-btn ${activeTab === 'history' ? 'is-active' : ''}`}
+                  onClick={() => setActiveTab('history')}
+                >
+                  <ClockIcon size={16} />
+                  <span>Past Uploads</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Tab 1: Upload & Validate Workflow */}
-          {activeTab === 'upload' && (
+          {/* Tab 1: Upload & Validate Workflow (Visible to HR in Upload Tab, and always visible to Brokers for fresh uploads) */}
+          {(activeTab === 'upload' || resolvedRole === 'broker') && (
             <div className="tab-content-pane">
               <input
                 ref={inputRef}
@@ -526,6 +675,16 @@ export default function MemberUpload({
                 onChange={(event) => selectFile(event.target.files?.[0])}
                 className="visually-hidden"
               />
+
+              {/* Broker Workflow Guidance Tip Banner */}
+              {resolvedRole === 'broker' && (
+                <div className="broker-workflow-tip" role="note">
+                  <span className="tip-icon">💡</span>
+                  <span className="tip-text">
+                    <strong>Workflow Tip:</strong> To revise an existing corporate submission and keep its audit history linked, click <strong>Upload</strong> on the respective row in the Submissions list below.
+                  </span>
+                </div>
+              )}
 
               {/* Dropzone & File Upload Container */}
               <div
@@ -563,7 +722,7 @@ export default function MemberUpload({
                       <div className="selected-file-text">
                         <h4 className="file-name" title={file.name}>{file.name}</h4>
                         <span className="file-meta">
-                          {formatBytes(file.size)} • {submitSuccess ? 'Submitted to Broker' : validationPassed ? 'Validation Passed • Ready to Submit' : 'Ready for validation'}
+                          {formatBytes(file.size)} • {submitSuccess ? 'Submitted' : validationPassed ? 'Validation Passed • Ready to Submit' : 'Ready for validation'}
                         </span>
                       </div>
                     </div>
@@ -591,6 +750,30 @@ export default function MemberUpload({
                 )}
               </div>
 
+              {/* Real-time SSE Progress Bar for Ingestion */}
+              {progressState && (
+                <div className="sse-progress-card">
+                  <div className="sse-progress-header">
+                    <div className="sse-progress-title">
+                      <span className={`sse-stage-indicator ${progressState.stage === 'complete' ? 'is-complete' : 'is-active'}`} />
+                      <span className="sse-stage-text">{progressState.message}</span>
+                    </div>
+                    <span className="sse-progress-percent">{progressState.percent || 0}%</span>
+                  </div>
+                  <div className="sse-progress-track">
+                    <div 
+                      className={`sse-progress-fill ${progressState.stage === 'complete' ? 'is-complete' : ''}`}
+                      style={{ width: `${progressState.percent || 0}%` }}
+                    />
+                  </div>
+                  {progressState.total > 0 && (
+                    <div className="sse-progress-footer">
+                      <span>Inserted {progressState.inserted || 0} of {progressState.total} member records</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Action Bar */}
               <div className="actions">
                 <button
@@ -613,7 +796,11 @@ export default function MemberUpload({
                       disabled={isSubmitting || !file}
                     >
                       <SendIcon size={14} />
-                      <span>{isSubmitting ? 'Submitting to S3…' : 'Submit to Broker'}</span>
+                      <span>
+                        {isSubmitting
+                          ? (progressState?.message || 'Processing…')
+                          : (resolvedRole === 'broker' ? 'Submit & Process Members' : 'Submit to Broker')}
+                      </span>
                     </button>
                   ) : (
                     <button
@@ -676,7 +863,9 @@ export default function MemberUpload({
                     </h3>
 
                     <p className="success-modal-desc">
-                      Your spreadsheet has been uploaded to S3 and queued for broker review.
+                      {resolvedRole === 'broker' 
+                        ? 'Your fresh spreadsheet has been uploaded to S3 and approved.'
+                        : 'Your spreadsheet has been uploaded to S3 and queued for broker review.'}
                     </p>
 
                     <div className="success-modal-ref-card">
@@ -701,11 +890,12 @@ export default function MemberUpload({
                         className="modal-btn-primary"
                         onClick={() => {
                           setSuccessModal(null)
-                          setActiveTab('history')
+                          setActiveTab(resolvedRole === 'broker' ? 'dashboard' : 'history')
+                          setBrokerTargetItem(null)
                         }}
                       >
                         <ClockIcon size={14} />
-                        <span>View in Past Uploads →</span>
+                        <span>{resolvedRole === 'broker' ? 'Back to Dashboard →' : 'View in Past Uploads →'}</span>
                       </button>
                     </div>
                   </div>
@@ -714,8 +904,8 @@ export default function MemberUpload({
             </div>
           )}
 
-          {/* Tab 2: Past Uploads History */}
-          {activeTab === 'history' && (
+          {/* Tab 2: Past Uploads History (HR only) */}
+          {activeTab === 'history' && resolvedRole !== 'broker' && (
             <div className="tab-content-pane">
               <UploadHistory
                 corpId={defaultCorpId}
@@ -729,38 +919,93 @@ export default function MemberUpload({
           )}
         </section>
 
-        {/* Validation Summary & Interactive Worksheet Preview (Only in upload tab) */}
-        {activeTab === 'upload' && validationSummary && (
-          <section className="summary-section" aria-label="Validation summary">
-            {/* Modern Stats Bar */}
+        {/* CONTAINER 2: HR File Submissions (Separate Container) */}
+        {resolvedRole === 'broker' && (
+          <section className="upload-card submissions-container-card" aria-label="HR File Submissions">
+            <BrokerDashboard
+              brokerId={defaultBrokerId}
+              corporates={corporates}
+              apiConfig={apiConfig}
+              refreshKey={historyRefreshKey}
+              onOpenUploadModal={(item) => {
+                setBrokerTargetItem(item)
+              }}
+              hasValidationErrors={!!validationSummary && validationSummary.rejectedCount > 0}
+            />
+          </section>
+        )}
+
+        {brokerTargetItem && resolvedRole === 'broker' && (
+          <BrokerUploadModal
+            item={brokerTargetItem}
+            brokerId={defaultBrokerId}
+            apiConfig={apiConfig}
+            onClose={() => setBrokerTargetItem(null)}
+            onSuccess={(result) => {
+              setBrokerTargetItem(null)
+              setSuccessModal({
+                uuid: result.uuid,
+                fileName: result.fileName,
+                rowCount: result.rowCount,
+              })
+              setHistoryRefreshKey((k) => k + 1)
+            }}
+          />
+        )}
+
+        {/* CONTAINER 3: Interactive Worksheet & Total Check Status (Unified Container) */}
+        {(activeTab === 'upload' || resolvedRole === 'broker') && validationSummary && (
+          <section className="upload-card validation-container-card" aria-label="Validation summary and worksheet">
+            {/* Total Check Status / Stats Bar KPIs */}
             <div className="stats-bar">
-              <div className="stat-item">
-                <span className="stat-label">TOTAL ROWS CHECKED</span>
-                <span className="stat-value">{validationSummary.totalRows}</span>
+              <div className="stat-card">
+                <div className="stat-icon-badge is-total">
+                  <LayersIcon size={15} />
+                </div>
+                <div className="stat-text-group">
+                  <span className="stat-label">Total Checked</span>
+                  <span className="stat-value">{validationSummary.totalRows}</span>
+                </div>
               </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-label">ACCEPTED ROWS</span>
-                <span className="stat-value is-accepted">{validationSummary.acceptedRows}</span>
+
+              <div className="stat-card-divider" />
+
+              <div className="stat-card">
+                <div className="stat-icon-badge is-accepted">
+                  <CheckCircleIcon size={15} />
+                </div>
+                <div className="stat-text-group">
+                  <span className="stat-label">Accepted</span>
+                  <span className="stat-value is-accepted">{validationSummary.acceptedRows}</span>
+                </div>
               </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-label">ROWS WITH ERRORS</span>
-                <span className={`stat-value ${validationSummary.rejectedCount > 0 ? 'is-rejected' : 'is-zero'}`}>
-                  {validationSummary.rejectedCount}
-                </span>
+
+              <div className="stat-card-divider" />
+
+              <div className="stat-card">
+                <div className="stat-icon-badge is-rejected">
+                  <AlertTriangleIcon size={15} />
+                </div>
+                <div className="stat-text-group">
+                  <span className="stat-label">With Errors</span>
+                  <span className={`stat-value ${validationSummary.rejectedCount > 0 ? 'is-rejected' : 'is-zero'}`}>
+                    {validationSummary.rejectedCount}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Validation Worksheet */}
+            {/* Interactive Worksheet */}
             {validationResult && (
-              <ValidationPreviewBoundary previewKey={file?.name}>
-                <ValidationWorksheet
-                  result={validationResult}
-                  errorsOnly={errorsOnly}
-                  onErrorsOnlyChange={setErrorsOnly}
-                />
-              </ValidationPreviewBoundary>
+              <div className="validation-worksheet-wrapper" style={{ marginTop: '16px' }}>
+                <ValidationPreviewBoundary previewKey={file?.name}>
+                  <ValidationWorksheet
+                    result={validationResult}
+                    errorsOnly={errorsOnly}
+                    onErrorsOnlyChange={setErrorsOnly}
+                  />
+                </ValidationPreviewBoundary>
+              </div>
             )}
           </section>
         )}

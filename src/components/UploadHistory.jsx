@@ -79,7 +79,7 @@ export function UploadHistory({
 
     setDownloadingUuid(item.uuid)
     try {
-      const downloadUrl = `${apiConfig.apiBaseUrl}/uploads3/download/${item.uuid}`
+      const downloadUrl = `${apiConfig.apiBaseUrl}/uploads3/download/${item.uuid}?role=hr`
       const response = await fetch(downloadUrl, {
         headers: { 'x-api-key': apiConfig.apiKey },
       })
@@ -100,7 +100,7 @@ export function UploadHistory({
       window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('[UploadHistory] Download error:', err)
-      alert(err instanceof Error ? err.message : 'Could not download the file from S3.')
+      setError(err instanceof Error ? err.message : 'Could not download the file from S3.')
     } finally {
       setDownloadingUuid(null)
     }
@@ -251,12 +251,9 @@ export function UploadHistory({
                   <td className="history-file-cell">
                     <div className="history-file-info">
                       <ExcelFileIcon size={24} />
-                      <div>
-                        <span className="history-filename" title={item.fileName}>
-                          {item.fileName}
-                        </span>
-                        <span className="history-uuid">{item.uuid}</span>
-                      </div>
+                      <span className="history-filename" title={item.fileName}>
+                        {item.fileName}
+                      </span>
                     </div>
                   </td>
                   <td className="history-date-cell">{formatDate(item.uploadedOn)}</td>
