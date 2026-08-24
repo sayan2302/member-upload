@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
   ClockIcon,
+  SearchIcon
 } from './Icons.jsx'
 
 export function UploadHistory({
@@ -20,7 +21,7 @@ export function UploadHistory({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [downloadingUuid, setDownloadingUuid] = useState(null)
-  const [selectedCorpFilter, setSelectedCorpFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true)
@@ -31,9 +32,7 @@ export function UploadHistory({
         : []
       const params = new URLSearchParams()
 
-      if (selectedCorpFilter !== 'all') {
-        params.append('corp_id', selectedCorpFilter)
-      } else if (validSubCorpIds.length > 1) {
+      if (validSubCorpIds.length > 1) {
         params.append('sub_corporate_ids', JSON.stringify(validSubCorpIds))
       } else if (corpId && corpId !== '0' && corpId !== 0) {
         params.append('corp_id', corpId)
@@ -68,7 +67,7 @@ export function UploadHistory({
     } finally {
       setIsLoading(false)
     }
-  }, [apiConfig, corpId, corporates, role, selectedCorpFilter])
+  }, [apiConfig, corpId, corporates, role])
 
   useEffect(() => {
     fetchHistory()
@@ -100,7 +99,7 @@ export function UploadHistory({
       window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('[UploadHistory] Download error:', err)
-      setError(err instanceof Error ? err.message : 'Could not download the file from S3.')
+      setError(err instanceof Error ? err.message : 'Could not download the file.')
     } finally {
       setDownloadingUuid(null)
     }
@@ -148,6 +147,15 @@ export function UploadHistory({
     )
   }
 
+  const filteredItems = historyItems.filter((item) => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase().trim()
+    const fileName = (item.fileName || '').toLowerCase()
+    const uploader = (item.uploadedByEmail || item.uploadedBy || '').toLowerCase()
+    const status = (item.status || '').toLowerCase()
+    return fileName.includes(q) || uploader.includes(q) || status.includes(q)
+  })
+
   return (
     <div className="upload-history-container">
       {/* Header with controls */}
@@ -155,28 +163,34 @@ export function UploadHistory({
         <div>
           <h3 className="history-title">
             Upload History
-            <span className="history-count-badge">{historyItems.length}</span>
+            <span className="history-count-badge">{filteredItems.length}</span>
           </h3>
           <p className="history-subtitle">
-            View all enrollment spreadsheets submitted to S3 and download the original files.
+            View all enrollment files submitted and download the original files.
           </p>
         </div>
 
-        <div className="history-actions">
-          {corporates.length > 1 && (
-            <select
-              className="history-corp-select"
-              value={selectedCorpFilter}
-              onChange={(e) => setSelectedCorpFilter(e.target.value)}
-            >
-              <option value="all">All Sub-Corporates</option>
-              {corporates.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
+        <div className="history-actions" style={{ flexWrap: 'wrap' }}>
+          <div className="history-search-wrapper">
+            <SearchIcon size={14} className="search-icon-svg" />
+            <input
+              type="text"
+              className="history-search-input"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-mini"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
 
           <button
             type="button"
@@ -231,36 +245,53 @@ export function UploadHistory({
             </button>
           )}
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="history-empty-state" style={{ padding: '36px 16px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+            No files match "<strong>{searchQuery}</strong>".
+          </p>
+        </div>
       ) : (
         /* Table of past uploads */
         <div className="history-table-wrapper">
           <table className="history-table">
             <thead>
               <tr>
-                <th>File Name</th>
-                <th>Uploaded Date</th>
-                <th>Uploaded By</th>
-                <th>Records</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Action</th>
+                <th className="col-file">File Name</th>
+                <th className="col-uploader">Uploaded By / On</th>
+                <th className="col-records">Records</th>
+                <th className="col-status">Status</th>
+                <th className="col-actions" style={{ textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {historyItems.map((item) => (
+              {filteredItems.map((item) => (
                 <tr key={item.uuid}>
                   <td className="history-file-cell">
                     <div className="history-file-info">
-                      <ExcelFileIcon size={24} />
+                      <ExcelFileIcon size={22} />
                       <span className="history-filename" title={item.fileName}>
                         {item.fileName}
                       </span>
                     </div>
                   </td>
-                  <td className="history-date-cell">{formatDate(item.uploadedOn)}</td>
-                  <td className="history-user-cell">{item.uploadedBy || 'HR Admin'}</td>
-                  <td className="history-rows-cell">
-                    <span className="valid-count">{item.validRows ?? item.totalRows ?? 0}</span>
-                    <span className="total-count"> / {item.totalRows ?? 0}</span>
+                  <td className="history-date-cell">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span 
+                        className="history-uploader-name"
+                        title={item.uploadedByEmail || item.uploadedBy || 'HR Admin'}
+                      >
+                        {item.uploadedByEmail && item.uploadedByEmail !== 'system' 
+                          ? item.uploadedByEmail 
+                          : (item.uploadedBy || 'hr.admin@mayfair.com')}
+                      </span>
+                      <span style={{ color: '#64748b', fontSize: '11px' }}>{formatDate(item.uploadedOn)}</span>
+                    </div>
+                  </td>
+                  <td className="history-rows-cell" style={{ whiteSpace: 'nowrap' }}>
+                    <span className="valid-count" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
+                      {item.noOfRows ?? item.validRows ?? 0}
+                    </span>
                   </td>
                   <td className="history-status-cell">{getStatusBadge(item.status)}</td>
                   <td className="history-action-cell" style={{ textAlign: 'right' }}>
@@ -269,9 +300,9 @@ export function UploadHistory({
                       className="history-download-btn"
                       onClick={() => handleDownload(item)}
                       disabled={downloadingUuid === item.uuid}
-                      title="Download original file from S3"
+                      title="Download original file"
                     >
-                      <DownloadIcon size={14} />
+                      <DownloadIcon size={13} />
                       <span>
                         {downloadingUuid === item.uuid ? 'Downloading…' : 'Download'}
                       </span>

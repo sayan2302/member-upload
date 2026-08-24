@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -11,7 +11,9 @@ import {
   UnlockIcon,
   InfoIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  SearchIcon,
+  BuildingIcon
 } from './Icons.jsx'
 
 function formatBytes(bytes) {
@@ -218,36 +220,10 @@ export function BrokerDashboard({
       return (
         <span 
           className="history-badge is-approved" 
-          title="Approved: All member records have been successfully validated, enrolled, and finalized in the core database."
+          title="Approved: All member records validated and saved to database."
         >
           <CheckCircleIcon size={12} />
           <span>Approved</span>
-        </span>
-      )
-    }
-
-    if (s === 'staged') {
-      return (
-        <span 
-          className="history-badge is-staged" 
-          style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}
-          title="Staged: Revised file is safely saved in S3 and queued in RabbitMQ for core database enrollment."
-        >
-          <ClockIcon size={12} />
-          <span>Staged</span>
-        </span>
-      )
-    }
-
-    if (s === 'processing') {
-      return (
-        <span 
-          className="history-badge is-processing" 
-          style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}
-          title="Enrolling: Background worker is currently inserting beneficiary records into core tables."
-        >
-          <ClockIcon size={12} />
-          <span>Enrolling...</span>
         </span>
       )
     }
@@ -257,7 +233,7 @@ export function BrokerDashboard({
         <span 
           className="history-badge is-failed" 
           style={{ background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' }}
-          title="Failed: Processing error occurred. Message has been moved to the Dead Letter Queue for retry."
+          title="Failed: Error occurred during validation or saving records to database."
         >
           <AlertTriangleIcon size={12} />
           <span>Failed</span>
@@ -309,55 +285,72 @@ export function BrokerDashboard({
   });
 
   return (
-    <div className="upload-history-container">
-      <div className="history-header" style={{ flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+    <div className={`upload-history-container ${isCollapsed ? 'is-collapsed-container' : ''}`}>
+      <div 
+        className={`history-header ${isCollapsed ? 'is-header-collapsed' : ''}`} 
+        style={{ 
+          flexWrap: 'wrap', 
+          gap: '12px', 
+          alignItems: 'center',
+          marginBottom: isCollapsed ? 0 : '16px'
+        }}
+      >
         <div>
-          <h3 className="history-title">
-            HR File Submissions
+          <button
+            type="button"
+            className="history-title-toggle"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            aria-expanded={!isCollapsed}
+            title={isCollapsed ? "Click to expand submissions" : "Click to collapse submissions"}
+          >
+            <span className="history-title-text">HR File Submissions</span>
             <span className="history-count-badge">{filteredItems.length}</span>
-            <button
-              type="button"
-              className="history-collapse-btn"
-              onClick={() => setIsCollapsed(prev => !prev)}
-              title={isCollapsed ? "Expand submissions list" : "Collapse submissions list"}
-              aria-expanded={!isCollapsed}
-            >
-              {isCollapsed ? <ChevronDownIcon size={13} /> : <ChevronUpIcon size={13} />}
-              <span>{isCollapsed ? 'Show' : 'Collapse'}</span>
-            </button>
-          </h3>
+            <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+              <ChevronDownIcon size={16} />
+            </span>
+          </button>
         </div>
 
         {!isCollapsed && (
           <div className="history-actions" style={{ flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              className="history-search-input"
-              placeholder="Search files..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                fontSize: '13px',
-                width: '220px'
-              }}
-            />
+            <div className="history-search-wrapper">
+              <SearchIcon size={14} className="search-icon-svg" />
+              <input
+                type="text"
+                className="history-search-input"
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="search-clear-mini"
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
 
             {corporates.length > 1 && (
-              <select
-                className="history-corp-select"
-                value={selectedCorpFilter}
-                onChange={(e) => setSelectedCorpFilter(e.target.value)}
-              >
-                <option value="all">All Sub-Corporates</option>
-                {corporates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="history-select-wrapper">
+                <BuildingIcon size={14} className="select-leading-icon" />
+                <select
+                  className="history-corp-select"
+                  value={selectedCorpFilter}
+                  onChange={(e) => setSelectedCorpFilter(e.target.value)}
+                  aria-label="Filter by corporate"
+                >
+                  <option value="all">All Sub-Corporates</option>
+                  {corporates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             <button
@@ -373,20 +366,6 @@ export function BrokerDashboard({
           </div>
         )}
       </div>
-
-      {isCollapsed && (
-        <div 
-          className="history-collapsed-banner"
-          onClick={() => setIsCollapsed(false)}
-          role="button"
-          tabIndex={0}
-          title="Click to expand HR submissions"
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsCollapsed(false); }}
-        >
-          <span>📁 <strong>{filteredItems.length} HR submission{filteredItems.length === 1 ? '' : 's'}</strong> available</span>
-          <span className="collapsed-action-text">Show Submissions <ChevronDownIcon size={14} /></span>
-        </div>
-      )}
 
       <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
         <div className="history-collapsible-inner">
@@ -451,26 +430,10 @@ export function BrokerDashboard({
                             </div>
 
                             <div className="status-popover-item">
-                              <span className="status-dot dot-staged" />
-                              <div className="status-popover-text">
-                                <div className="status-popover-label">Staged</div>
-                                <div className="status-popover-desc">Saved in S3; queued in RabbitMQ for database enrollment.</div>
-                              </div>
-                            </div>
-
-                            <div className="status-popover-item">
-                              <span className="status-dot dot-processing" />
-                              <div className="status-popover-text">
-                                <div className="status-popover-label">Enrolling...</div>
-                                <div className="status-popover-desc">Background worker is inserting member records into core tables.</div>
-                              </div>
-                            </div>
-
-                            <div className="status-popover-item">
                               <span className="status-dot dot-approved" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Approved</div>
-                                <div className="status-popover-desc">Enrollment complete and finalized in core database.</div>
+                                <div className="status-popover-desc">All member records validated and saved to database.</div>
                               </div>
                             </div>
 
@@ -478,7 +441,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-failed" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Failed</div>
-                                <div className="status-popover-desc">Processing error; queued in Dead Letter Queue (DLQ) for retry.</div>
+                                <div className="status-popover-desc">Error occurred during validation or saving records to database.</div>
                               </div>
                             </div>
                           </div>
@@ -505,17 +468,25 @@ export function BrokerDashboard({
                         </td>
                         <td className="history-date-cell">
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span style={{ color: '#334155', fontWeight: 500 }}>{item.uploadedBy || 'HR Admin'}</span>
-                            <span>{formatDate(item.uploadedOn)}</span>
+                            <span 
+                              style={{ color: '#0f172a', fontWeight: 600, fontSize: '12px' }} 
+                              title={item.uploadedByEmail || item.uploadedBy || 'HR Admin'}
+                            >
+                              {item.uploadedByEmail && item.uploadedByEmail !== 'system' 
+                                ? item.uploadedByEmail 
+                                : (item.uploadedBy || 'hr.admin@mayfair.com')}
+                            </span>
+                            <span style={{ color: '#64748b', fontSize: '11px' }}>{formatDate(item.uploadedOn)}</span>
                           </div>
                         </td>
-                        <td className="history-rows-cell">
-                          <span className="valid-count">{item.validRows ?? item.totalRows ?? 0}</span>
-                          <span className="total-count"> / {item.totalRows ?? 0}</span>
+                        <td className="history-rows-cell" style={{ whiteSpace: 'nowrap' }}>
+                          <span className="valid-count" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
+                            {item.noOfRows ?? item.validRows ?? 0}
+                          </span>
                         </td>
                         <td className="history-status-cell" style={{ whiteSpace: 'nowrap' }}>{getStatusBadge(item.status, item.lockedByUserId)}</td>
                         <td className="history-action-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                             
                             {/* 1. Upload - always present */}
                             <button
@@ -525,7 +496,7 @@ export function BrokerDashboard({
                               disabled={isLockedByOther || isApproved || processingUuid === item.uuid}
                               title="Upload revised file"
                             >
-                              <UploadCloudIcon size={14} />
+                              <UploadCloudIcon size={13} />
                               <span>Upload</span>
                             </button>
                             
@@ -538,7 +509,7 @@ export function BrokerDashboard({
                                 disabled={processingUuid === item.uuid}
                                 title="Unlock file to allow others to review"
                               >
-                                <UnlockIcon size={14} />
+                                <UnlockIcon size={13} />
                                 <span>Unlock</span>
                               </button>
                             )}
@@ -552,7 +523,7 @@ export function BrokerDashboard({
                                 disabled={processingUuid === item.uuid}
                                 title="Lock this file to yourself and download"
                               >
-                                <LockIcon size={14} />
+                                <LockIcon size={13} />
                                 <span>{processingUuid === item.uuid ? 'Locking...' : 'Download & Lock'}</span>
                               </button>
                             )}
@@ -566,7 +537,7 @@ export function BrokerDashboard({
                                 disabled={processingUuid === item.uuid}
                                 title="Download file"
                               >
-                                <DownloadIcon size={14} />
+                                <DownloadIcon size={13} />
                                 <span>Download</span>
                               </button>
                             )}

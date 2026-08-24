@@ -253,19 +253,21 @@ export default function MemberUpload({
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [progressState, setProgressState] = useState(null)
   const [currentFileUuid, setCurrentFileUuid] = useState(null)
+  const [uploadModeModal, setUploadModeModal] = useState(null)
 
   const inputRef = useRef(null)
 
-  // Listen for Escape key to close success modal
+  // Listen for Escape key to close modals
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && successModal) {
-        setSuccessModal(null)
+      if (e.key === 'Escape') {
+        if (successModal) setSuccessModal(null)
+        if (uploadModeModal) setUploadModeModal(null)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [successModal])
+  }, [successModal, uploadModeModal])
 
   // Optional: fetch live corporate options if optionsUrl is provided in .NET
   useEffect(() => {
@@ -307,11 +309,45 @@ export default function MemberUpload({
     setMessage('')
   }
 
+  const handleDropZoneClick = (e) => {
+    if (e.target.closest('button')) return
+    if (file) return
+    if (resolvedRole === 'broker') {
+      setUploadModeModal({ type: 'browse' })
+    } else {
+      inputRef.current?.click()
+    }
+  }
+
   const handleDrop = (event) => {
     event.preventDefault()
     setIsDragging(false)
     const droppedFile = event.dataTransfer.files?.[0]
-    selectFile(droppedFile)
+    if (!droppedFile) return
+    if (resolvedRole === 'broker' && !file) {
+      setUploadModeModal({ type: 'drop', file: droppedFile })
+    } else {
+      selectFile(droppedFile)
+    }
+  }
+
+  const handleProceedFreshUpload = () => {
+    const modalData = uploadModeModal
+    setUploadModeModal(null)
+    if (!modalData) return
+    if (modalData.type === 'drop' && modalData.file) {
+      selectFile(modalData.file)
+    } else {
+      inputRef.current?.click()
+    }
+  }
+
+  const handleGoToSubmissions = () => {
+    setUploadModeModal(null)
+    const submissionsElement = document.querySelector('.submissions-container-card')
+    if (submissionsElement) {
+      submissionsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   const clearFile = () => {
@@ -632,11 +668,6 @@ export default function MemberUpload({
             </div>
           </div>
 
-          <CorporatePolicySelector
-            role={resolvedRole}
-            corporates={corporates}
-          />
-
           {/* Modern Navigation Tabs (HR Only) */}
           {resolvedRole !== 'broker' && (
             <div className="upload-tabs-container">
@@ -676,16 +707,6 @@ export default function MemberUpload({
                 className="visually-hidden"
               />
 
-              {/* Broker Workflow Guidance Tip Banner */}
-              {resolvedRole === 'broker' && (
-                <div className="broker-workflow-tip" role="note">
-                  <span className="tip-icon">💡</span>
-                  <span className="tip-text">
-                    <strong>Workflow Tip:</strong> To revise an existing corporate submission and keep its audit history linked, click <strong>Upload</strong> on the respective row in the Submissions list below.
-                  </span>
-                </div>
-              )}
-
               {/* Dropzone & File Upload Container */}
               <div
                 className={`drop-zone ${isDragging ? 'is-dragging' : ''} ${file ? 'has-file' : ''}`}
@@ -695,10 +716,7 @@ export default function MemberUpload({
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                onClick={(e) => {
-                  if (e.target.closest('button')) return
-                  inputRef.current?.click()
-                }}
+                onClick={handleDropZoneClick}
                 role="region"
                 aria-label="File upload area"
               >
@@ -775,7 +793,7 @@ export default function MemberUpload({
               )}
 
               {/* Action Bar */}
-              <div className="actions">
+              <div className="mup-actions">
                 <button
                   type="button"
                   className="template-button"
@@ -787,7 +805,7 @@ export default function MemberUpload({
                   <span>{isDownloading ? 'Preparing Template…' : 'Download Template'}</span>
                 </button>
 
-                <div className="primary-actions">
+                <div className="mup-primary-actions">
                   {validationPassed && !submitSuccess ? (
                     <button
                       type="button"
@@ -919,7 +937,16 @@ export default function MemberUpload({
           )}
         </section>
 
-        {/* CONTAINER 2: HR File Submissions (Separate Container) */}
+        {/* CONTAINER 2: Assigned Client Companies (Separate Collapsible Card) */}
+        {(activeTab === 'upload' || resolvedRole === 'broker') && corporates && corporates.length > 0 && (
+          <CorporatePolicySelector
+            role={resolvedRole}
+            corporates={corporates}
+            defaultCollapsed={true}
+          />
+        )}
+
+        {/* CONTAINER 3: HR File Submissions (Separate Container) */}
         {resolvedRole === 'broker' && (
           <section className="upload-card submissions-container-card" aria-label="HR File Submissions">
             <BrokerDashboard
@@ -1008,6 +1035,100 @@ export default function MemberUpload({
               </div>
             )}
           </section>
+        )}
+
+        {/* Upload Mode Confirmation Modal for Brokers */}
+        {uploadModeModal && (
+          <div className="success-modal-overlay" role="dialog" aria-modal="true">
+            <div className="success-modal-card" style={{ maxWidth: '500px', textAlign: 'left', padding: '26px 28px' }}>
+              <button
+                type="button"
+                className="modal-close-icon-btn"
+                onClick={() => setUploadModeModal(null)}
+                aria-label="Close dialog"
+              >
+                ×
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 0 0 4px #f0f7ff'
+                }}>
+                  <UploadCloudIcon size={24} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                    Confirm Upload Mode
+                  </h3>
+                  <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
+                    Are you uploading a new fresh file or revising an HR file?
+                  </p>
+                </div>
+              </div>
+
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                fontSize: '13px'
+              }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '16px', marginTop: '1px' }}>✨</span>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', marginBottom: '2px' }}>
+                      Fresh Upload
+                    </strong>
+                    <span style={{ color: '#64748b', lineHeight: 1.4 }}>
+                      Creates a brand new corporate submission and directly enrolls member records.
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '16px', marginTop: '1px' }}>🔄</span>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', marginBottom: '2px' }}>
+                      Revise an Existing HR Submission?
+                    </strong>
+                    <span style={{ color: '#64748b', lineHeight: 1.4 }}>
+                      If you are fixing errors for a file submitted by HR, use the <strong>Upload</strong> button on that file's row in the <strong>HR File Submissions</strong> table below to keep the audit history linked.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="success-modal-actions" style={{ gap: '10px' }}>
+                <button
+                  type="button"
+                  className="modal-btn-secondary"
+                  onClick={handleGoToSubmissions}
+                >
+                  View Submissions List
+                </button>
+                <button
+                  type="button"
+                  className="modal-btn-primary"
+                  onClick={handleProceedFreshUpload}
+                >
+                  Continue with Fresh Upload
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </main>

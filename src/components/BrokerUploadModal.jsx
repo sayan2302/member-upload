@@ -272,7 +272,7 @@ export function BrokerUploadModal({
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: '#0f172a' }}>Upload Revised File</h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              For: <span style={{ fontWeight: 500, color: '#334155' }}>{item.fileName}</span> (Corporate ID: {item.corpId})
+              For: <span style={{ fontWeight: 500, color: '#334155' }}>{item.fileName}</span>
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -359,14 +359,14 @@ export function BrokerUploadModal({
             </div>
           )}
 
-          <div className="actions" style={{ marginTop: 0 }}>
+          <div className="mup-actions" style={{ marginTop: 0, position: 'static', display: 'flex' }}>
             {validationPassed ? (
               <button 
                 type="button" 
                 className="submit-button" 
                 onClick={submitToS3} 
                 disabled={isSubmitting || !file} 
-                style={{ marginLeft: 'auto' }}
+                style={{ marginLeft: 'auto', position: 'static' }}
               >
                 <SendIcon size={14} />
                 <span>{isSubmitting ? (progressState?.message || 'Processing...') : 'Submit Revision'}</span>
@@ -377,7 +377,7 @@ export function BrokerUploadModal({
                 className="upload-button" 
                 onClick={validateFile} 
                 disabled={isValidating || isSubmitting || !file} 
-                style={{ marginLeft: 'auto' }}
+                style={{ marginLeft: 'auto', position: 'static' }}
               >
                 {isValidating ? 'Validating...' : 'Validate File'}
               </button>

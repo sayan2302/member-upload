@@ -4,12 +4,15 @@ import {
   CopyIcon,
   CheckIcon,
   SearchIcon,
+  ChevronDownIcon
 } from './Icons.jsx'
 
 export function CorporatePolicySelector({
   role = 'hr',
   corporates = [],
+  defaultCollapsed = false,
 }) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
   const [searchTerm, setSearchTerm] = useState('')
   const [copiedId, setCopiedId] = useState(null)
 
@@ -60,23 +63,45 @@ export function CorporatePolicySelector({
     return null
   }
 
+  const titleText = isSingle
+    ? 'Associated Corporate'
+    : isBroker
+    ? 'Assigned Client Companies'
+    : 'Associated Sub-Corporates'
+
   return (
-    <div className="corporate-section" aria-label="Associated Corporate Names">
-      <div className="corporate-section-header">
-        <div className="corporate-section-meta">
-          <span className="corporate-section-label">
-            {isSingle
-              ? 'Associated Corporate'
-              : isBroker
-              ? `Assigned Client Companies (${corporates.length})`
-              : `Associated Sub-Corporates (${corporates.length})`}
-          </span>
-          <span className="corporate-section-hint">
-            (Click copy to use exact name in Column A)
-          </span>
+    <section 
+      className={`upload-card corporate-container-card ${isCollapsed ? 'is-card-collapsed' : ''}`}
+      aria-label={titleText}
+    >
+      <div 
+        className={`corporate-section-header ${isCollapsed ? 'is-header-collapsed' : ''}`} 
+        style={{ 
+          marginBottom: isCollapsed ? 0 : '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}
+      >
+        <div>
+          <button
+            type="button"
+            className="history-title-toggle"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            aria-expanded={!isCollapsed}
+            title={isCollapsed ? `Click to expand ${titleText.toLowerCase()}` : `Click to collapse ${titleText.toLowerCase()}`}
+          >
+            <span className="history-title-text">{titleText}</span>
+            <span className="history-count-badge">{corporates.length}</span>
+            <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+              <ChevronDownIcon size={16} />
+            </span>
+          </button>
         </div>
 
-        {corporates.length > 3 && (
+        {!isCollapsed && corporates.length > 3 && (
           <div className="corporate-search-inline">
             <SearchIcon size={14} className="search-icon-svg" />
             <input
@@ -90,53 +115,57 @@ export function CorporatePolicySelector({
         )}
       </div>
 
-      {/* Modern Minimalist Chips Grid */}
-      <div className="corporate-chips-grid">
-        {filteredCorporates.map((corp) => {
-          const isCopied = copiedId === `corp-${corp.id}`
+      <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+        <div className="history-collapsible-inner">
+          {/* Modern Minimalist Chips Grid */}
+          <div className="corporate-chips-grid">
+            {filteredCorporates.map((corp) => {
+              const isCopied = copiedId === `corp-${corp.id}`
 
-          return (
-            <div
-              key={corp.id}
-              className={`corporate-chip ${isCopied ? 'is-copied' : ''}`}
-              onClick={() => handleCopy(corp.name, `corp-${corp.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  handleCopy(corp.name, `corp-${corp.id}`)
-                }
-              }}
-              title={`Click to copy "${corp.name}"`}
-            >
-              <div className="chip-icon">
-                <BuildingIcon size={15} />
-              </div>
+              return (
+                <div
+                  key={corp.id}
+                  className={`corporate-chip ${isCopied ? 'is-copied' : ''}`}
+                  onClick={() => handleCopy(corp.name, `corp-${corp.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleCopy(corp.name, `corp-${corp.id}`)
+                    }
+                  }}
+                  title={`Click to copy "${corp.name}"`}
+                >
+                  <div className="chip-icon">
+                    <BuildingIcon size={15} />
+                  </div>
 
-              <div className="chip-body">
-                <span className="chip-name">{corp.name}</span>
-              </div>
+                  <div className="chip-body">
+                    <span className="chip-name">{corp.name}</span>
+                  </div>
 
-              <div className="chip-action">
-                {isCopied ? (
-                  <span className="chip-badge-copied">
-                    <CheckIcon size={12} /> Copied
-                  </span>
-                ) : (
-                  <span className="chip-badge-copy">
-                    <CopyIcon size={12} /> Copy
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
+                  <div className="chip-action">
+                    {isCopied ? (
+                      <span className="chip-badge-copied">
+                        <CheckIcon size={12} /> Copied
+                      </span>
+                    ) : (
+                      <span className="chip-badge-copy">
+                        <CopyIcon size={12} /> Copy
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
 
-        {filteredCorporates.length === 0 && (
-          <span className="chips-empty-text">No company matches "{searchTerm}"</span>
-        )}
+            {filteredCorporates.length === 0 && (
+              <span className="chips-empty-text">No company matches "{searchTerm}"</span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
