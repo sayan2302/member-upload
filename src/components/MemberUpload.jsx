@@ -181,11 +181,6 @@ export function ValidationWorksheet({
     >
       <div 
         className={`validation-panel-header corporate-section-header ${isCollapsed ? 'is-header-collapsed' : ''}`}
-        style={{ 
-          marginBottom: isCollapsed ? 0 : '14px',
-          paddingBottom: isCollapsed ? 0 : '12px',
-          borderBottom: isCollapsed ? 'none' : '1px solid #f1f5f9',
-        }}
       >
         <div>
           <button
@@ -203,58 +198,56 @@ export function ValidationWorksheet({
           </button>
         </div>
 
-        {!isCollapsed && (
-          <div className="validation-header-controls">
-            {/* Integrated Compact KPI Metrics Strip */}
-            <div className="worksheet-metrics-strip">
-              <div className="ws-metric-pill is-total" title="Total records in file">
-                <span className="ws-metric-label">TOTAL CHECKED</span>
-                <span className="ws-metric-val">{totalCount}</span>
-              </div>
-
-              <div className="ws-metric-pill is-accepted" title="Valid records passed all checks">
-                <CheckCircleIcon size={13} className="ws-metric-icon" />
-                <span className="ws-metric-label">ACCEPTED</span>
-                <span className="ws-metric-val">{acceptedCount}</span>
-              </div>
-
-              <div className={`ws-metric-pill is-rejected ${errorCount > 0 ? 'has-errors' : ''}`} title="Records with validation errors">
-                <AlertTriangleIcon size={13} className="ws-metric-icon" />
-                <span className="ws-metric-label">WITH ERRORS</span>
-                <span className="ws-metric-val">{errorCount}</span>
-              </div>
+        <div className={`validation-header-controls ${isCollapsed ? 'is-hidden-actions' : ''}`}>
+          {/* Integrated Compact KPI Metrics Strip */}
+          <div className="worksheet-metrics-strip">
+            <div className="ws-metric-pill is-total" title="Total records in file">
+              <span className="ws-metric-label">TOTAL</span>
+              <span className="ws-metric-val">{totalCount}</span>
             </div>
 
-            {/* Modern Sliding Switch Toggle */}
-            <label className="ws-toggle-switch" title="Toggle to display only rows with errors">
-              <input
-                type="checkbox"
-                checked={errorsOnly}
-                onChange={(event) => onErrorsOnlyChange(event.target.checked)}
-              />
-              <span className="ws-toggle-track">
-                <span className="ws-toggle-thumb" />
-              </span>
-              <span className="ws-toggle-label">Show errors only</span>
-            </label>
+            <div className="ws-metric-pill is-accepted" title="Valid records passed all checks">
+              <CheckCircleIcon size={12} className="ws-metric-icon" />
+              <span className="ws-metric-label">ACCEPTED</span>
+              <span className="ws-metric-val">{acceptedCount}</span>
+            </div>
 
-            {/* Fullscreen Button */}
-            <button
-              type="button"
-              className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
-              aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
-            >
-              {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
-              <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-            </button>
+            <div className={`ws-metric-pill is-rejected ${errorCount > 0 ? 'has-errors' : ''}`} title="Records with validation errors">
+              <AlertTriangleIcon size={12} className="ws-metric-icon" />
+              <span className="ws-metric-label">ERRORS</span>
+              <span className="ws-metric-val">{errorCount}</span>
+            </div>
           </div>
-        )}
+
+          {/* Modern Sliding Switch Toggle */}
+          <label className="ws-toggle-switch" title="Toggle to display only rows with errors">
+            <input
+              type="checkbox"
+              checked={errorsOnly}
+              onChange={(event) => onErrorsOnlyChange(event.target.checked)}
+            />
+            <span className="ws-toggle-track">
+              <span className="ws-toggle-thumb" />
+            </span>
+            <span className="ws-toggle-label">Show errors only</span>
+          </label>
+
+          {/* Fullscreen Button */}
+          <button
+            type="button"
+            className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+          >
+            {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
+        </div>
       </div>
 
-      {!isCollapsed && (
-        <>
+      <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+        <div className="history-collapsible-inner">
           <div className="worksheet-scroll">
             <table className="worksheet">
               <thead>
@@ -343,8 +336,8 @@ export function ValidationWorksheet({
               Show 75 more rows
             </button>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </section>
   )
 }

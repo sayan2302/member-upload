@@ -35,7 +35,7 @@ button {
 
 .page-shell {
   min-height: auto !important;
-  padding: 0 !important;
+  padding: 0 0 20px 0 !important;
   margin: 0 !important;
   width: 100% !important;
 }
@@ -48,6 +48,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 20px;
+}
+
+.bmpu-page {
+  padding-bottom: 20px !important;
 }
 
 /* ── Main Unified Upload Card ────────────────────────────────────────────── */
@@ -1111,7 +1116,7 @@ button {
   border-radius: 12px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 3px 10px -2px rgba(15, 23, 42, 0.06);
-  transition: all 0.2s ease;
+  transition: padding 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
 .validation-panel-header {
@@ -1122,20 +1127,23 @@ button {
   margin-bottom: 12px;
   border-bottom: 1px solid #f1f5f9;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  transition: padding 0.35s cubic-bezier(0.16, 1, 0.3, 1), margin 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
 }
 
 .worksheet-header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .worksheet-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .worksheet-title-icon-badge {
@@ -1164,21 +1172,23 @@ button {
 .worksheet-metrics-strip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: #f8fafc;
-  padding: 3px 6px;
-  border-radius: 8px;
+  padding: 2px 4px;
+  border-radius: 7px;
   border: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .ws-metric-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
   font-size: 11px;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .ws-metric-pill.is-total {
@@ -1206,15 +1216,15 @@ button {
 }
 
 .ws-metric-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   opacity: 0.85;
 }
 
 .ws-metric-val {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1226,21 +1236,31 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.validation-header-controls.is-hidden-actions {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
 }
 
 /* ── Modern Sliding Switch Toggle ────────────────────────────────────────── */
 .ws-toggle-switch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #475569;
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 0.15s ease;
 }
 
@@ -1258,8 +1278,8 @@ button {
 
 .ws-toggle-track {
   position: relative;
-  width: 32px;
-  height: 18px;
+  width: 30px;
+  height: 17px;
   background-color: #cbd5e1;
   border-radius: 9999px;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1274,8 +1294,8 @@ button {
 }
 
 .ws-toggle-thumb {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   background-color: #ffffff;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -1512,35 +1532,60 @@ button {
   border-left: 7px solid transparent;
 }
 
-/* Floating Rich Tooltip on Hover / Focus */
+/* Floating Rich Tooltip on Hover / Focus (Opens Below Cell to avoid Top Row Clipping) */
 .worksheet .cell-error-tooltip {
   display: none;
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
   background: #0f172a;
   color: #f8fafc;
   border-radius: 8px;
   padding: 10px 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
-  z-index: 9999;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  z-index: 99999;
   min-width: 200px;
   max-width: 320px;
   white-space: normal;
   pointer-events: none;
-  animation: fadeInTooltip 0.15s ease-out;
+  animation: fadeInTooltipDown 0.15s ease-out;
 }
 
 .worksheet .cell-error-tooltip::after {
   content: '';
   position: absolute;
-  top: 100%;
+  bottom: 100%;
+  top: auto;
   left: 50%;
   transform: translateX(-50%);
   border-width: 5px;
   border-style: solid;
+  border-color: transparent transparent #0f172a transparent;
+}
+
+/* Flip upward only for the very bottom rows */
+.worksheet tbody tr:nth-last-child(-n+2):not(:first-child):not(:nth-child(2)) .cell-error-tooltip {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation: fadeInTooltipUp 0.15s ease-out;
+}
+
+.worksheet tbody tr:nth-last-child(-n+2):not(:first-child):not(:nth-child(2)) .cell-error-tooltip::after {
+  bottom: auto;
+  top: 100%;
   border-color: #0f172a transparent transparent transparent;
+}
+
+@keyframes fadeInTooltipDown {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes fadeInTooltipUp {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .worksheet td.cell-error:hover .cell-error-tooltip,
