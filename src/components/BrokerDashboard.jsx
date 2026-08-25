@@ -12,8 +12,7 @@ import {
   InfoIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  SearchIcon,
-  BuildingIcon
+  SearchIcon
 } from './Icons.jsx'
 
 function formatBytes(bytes) {
@@ -38,7 +37,6 @@ export function BrokerDashboard({
   const [processingUuid, setProcessingUuid] = useState(null)
   const [unlockConfirmItem, setUnlockConfirmItem] = useState(null)
   
-  const [selectedCorpFilter, setSelectedCorpFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)
 
@@ -61,9 +59,7 @@ export function BrokerDashboard({
         : []
       const params = new URLSearchParams()
 
-      if (selectedCorpFilter !== 'all') {
-        params.append('corp_id', selectedCorpFilter)
-      } else if (validSubCorpIds.length > 0) {
+      if (validSubCorpIds.length > 0) {
         params.append('sub_corporate_ids', JSON.stringify(validSubCorpIds))
       }
 
@@ -90,7 +86,7 @@ export function BrokerDashboard({
     } finally {
       setIsLoading(false)
     }
-  }, [apiConfig, corporates, selectedCorpFilter])
+  }, [apiConfig, corporates])
 
   useEffect(() => {
     fetchDashboard()
@@ -333,25 +329,6 @@ export function BrokerDashboard({
                 </button>
               )}
             </div>
-
-            {corporates.length > 1 && (
-              <div className="history-select-wrapper">
-                <BuildingIcon size={14} className="select-leading-icon" />
-                <select
-                  className="history-corp-select"
-                  value={selectedCorpFilter}
-                  onChange={(e) => setSelectedCorpFilter(e.target.value)}
-                  aria-label="Filter by corporate"
-                >
-                  <option value="all">All Sub-Corporates</option>
-                  {corporates.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <button
               type="button"

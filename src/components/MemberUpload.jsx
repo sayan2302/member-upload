@@ -440,7 +440,11 @@ export default function MemberUpload({
       formData.append('sub_corporate_names', JSON.stringify(corporates.map((c) => c.name)))
       formData.append('sub_corporate_ids', JSON.stringify(corporates.map((c) => c.id)))
 
-      const response = await fetch(`${apiConfig.apiBaseUrl}/validate/preview`, {
+      const validateEndpoint = resolvedRole === 'broker'
+        ? `${apiConfig.apiBaseUrl}/broker/upload/validate`
+        : `${apiConfig.apiBaseUrl}/validate/preview`
+
+      const response = await fetch(validateEndpoint, {
         method: 'POST',
         headers: { 
           'x-api-key': apiConfig.apiKey,

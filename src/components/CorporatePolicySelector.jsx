@@ -117,6 +117,12 @@ export function CorporatePolicySelector({
 
       <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
         <div className="history-collapsible-inner">
+          <p className="corporate-section-hint" style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>
+            {isBroker
+              ? 'Click "Copy" to use the exact company name in Column C of the template.'
+              : 'Click "Copy" to use the exact company name in Column B of the template.'}
+          </p>
+
           {/* Modern Minimalist Chips Grid */}
           <div className="corporate-chips-grid">
             {filteredCorporates.map((corp) => {

@@ -166,7 +166,7 @@ export function UploadHistory({
             <span className="history-count-badge">{filteredItems.length}</span>
           </h3>
           <p className="history-subtitle">
-            View all enrollment files submitted and download the original files.
+            View and download previously submitted enrollment spreadsheets.
           </p>
         </div>
 

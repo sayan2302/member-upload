@@ -102,7 +102,7 @@ export function BrokerUploadModal({
       formData.append('sub_corporate_names', JSON.stringify([]))
       formData.append('sub_corporate_ids', JSON.stringify([]))
 
-      const response = await fetch(`${apiConfig.apiBaseUrl}/validate/preview`, {
+      const response = await fetch(`${apiConfig.apiBaseUrl}/broker/upload/validate`, {
         method: 'POST',
         headers: { 
           'x-api-key': apiConfig.apiKey,
@@ -117,9 +117,9 @@ export function BrokerUploadModal({
 
       const acceptedRows = Array.isArray(data.acceptedRows) ? data.acceptedRows : []
       const rejectedRows = Array.isArray(data.rejectedRows) ? data.rejectedRows : []
-      const totalRows = (data.totalRows != null ? data.totalRows : acceptedRows.length + rejectedRows.length) || 0
-      const acceptedCount = (data.acceptedCount != null ? data.acceptedCount : acceptedRows.length) || 0
-      const rejectedCount = (data.rejectedCount != null ? data.rejectedCount : rejectedRows.length) || 0
+      const totalRows = (data.summary?.totalRows ?? data.totalRows ?? (acceptedRows.length + rejectedRows.length)) || 0
+      const acceptedCount = (data.summary?.acceptedRows ?? data.acceptedCount ?? acceptedRows.length) || 0
+      const rejectedCount = (data.summary?.rejectedRows ?? data.rejectedCount ?? rejectedRows.length) || 0
 
       setValidationSummary({ totalRows, acceptedRows: acceptedCount, rejectedCount })
       setValidationResult(data)
