@@ -1100,12 +1100,17 @@ button {
 }
 
 /* ── Interactive Worksheet Panel ─────────────────────────────────────────── */
+.validation-container-wrapper {
+  margin-top: 16px;
+  width: 100%;
+}
+
 .validation-panel {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 3px 10px -2px rgba(15, 23, 42, 0.06);
   transition: all 0.2s ease;
 }
 
@@ -1113,51 +1118,194 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.validation-panel-header h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.validation-panel-header p {
-  margin: 2px 0 0 0;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.validation-header-controls {
+.worksheet-header-left {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-.error-filter {
+.worksheet-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.worksheet-title-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.worksheet-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* ── Integrated Compact KPI Metrics Strip ────────────────────────────────── */
+.worksheet-metrics-strip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  background: #f8fafc;
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.ws-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.ws-metric-pill.is-total {
+  background: #ffffff;
   color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.ws-metric-pill.is-accepted {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.ws-metric-pill.is-rejected {
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.ws-metric-pill.is-rejected.has-errors {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.ws-metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.ws-metric-val {
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.ws-metric-icon {
+  flex-shrink: 0;
+}
+
+.validation-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Modern Sliding Switch Toggle ────────────────────────────────────────── */
+.ws-toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.ws-toggle-switch:hover {
+  background: #f1f5f9;
+}
+
+.ws-toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ws-toggle-track {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.ws-toggle-switch:hover .ws-toggle-track {
+  background-color: #94a3b8;
+}
+
+.ws-toggle-thumb {
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(0);
+}
+
+.ws-toggle-switch input:checked + .ws-toggle-track {
+  background-color: #e11d48;
+}
+
+.ws-toggle-switch input:checked + .ws-toggle-track .ws-toggle-thumb {
+  transform: translateX(14px);
+}
+
+.ws-toggle-switch input:checked ~ .ws-toggle-label {
+  color: #991b1b;
+  font-weight: 700;
 }
 
 .worksheet-fullscreen-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
   color: #334155;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -1773,14 +1921,18 @@ button {
 }
 
 .submissions-container-card:has(.is-collapsed-container),
-.corporate-container-card.is-card-collapsed {
+.corporate-container-card.is-card-collapsed,
+.validation-panel.is-card-collapsed {
   padding: 14px 16px !important;
   transition: padding 0.25s ease;
 }
 
 .history-header.is-header-collapsed,
-.corporate-section-header.is-header-collapsed {
+.corporate-section-header.is-header-collapsed,
+.validation-panel-header.is-header-collapsed {
   margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
 }
 
 .history-title-toggle {

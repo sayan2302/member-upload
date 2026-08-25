@@ -399,6 +399,8 @@ export function BrokerUploadModal({
                   errorsOnly={errorsOnly}
                   onErrorsOnlyChange={setErrorsOnly}
                   validationSummary={validationSummary}
+                  role="broker"
+                  isBroker={true}
                 />
               </ValidationPreviewBoundary>
             </div>

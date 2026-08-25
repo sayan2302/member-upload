@@ -16,6 +16,7 @@ import {
   MaximizeIcon,
   MinimizeIcon,
   LayersIcon,
+  ChevronDownIcon,
 } from './Icons.jsx'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -68,9 +69,22 @@ export class ValidationPreviewBoundary extends Component {
   }
 }
 
-export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) {
+export function ValidationWorksheet({
+  result,
+  errorsOnly,
+  onErrorsOnlyChange,
+  validationSummary,
+  role = 'hr',
+  isBroker = false,
+  hideSummaryText = false,
+}) {
   const [visibleRowCount, setVisibleRowCount] = useState(75)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const totalCount = validationSummary?.totalRows ?? result?.summary?.totalRows ?? 0
+  const acceptedCount = validationSummary?.acceptedRows ?? result?.summary?.acceptedRows ?? 0
+  const errorCount = validationSummary?.rejectedCount ?? result?.summary?.rejectedRows ?? 0
 
   useEffect(() => {
     if (isFullscreen) {
@@ -161,134 +175,175 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
   }
 
   return (
-    <section className={`validation-panel ${isFullscreen ? 'is-fullscreen' : ''}`} aria-label="Validation results">
-      <div className="validation-panel-header">
+    <section 
+      className={`upload-card validation-panel ${isCollapsed ? 'is-card-collapsed' : ''} ${isFullscreen ? 'is-fullscreen' : ''}`} 
+      aria-label="Interactive Worksheet Preview"
+    >
+      <div 
+        className={`validation-panel-header corporate-section-header ${isCollapsed ? 'is-header-collapsed' : ''}`}
+        style={{ 
+          marginBottom: isCollapsed ? 0 : '14px',
+          paddingBottom: isCollapsed ? 0 : '12px',
+          borderBottom: isCollapsed ? 'none' : '1px solid #f1f5f9',
+        }}
+      >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2>Interactive Worksheet Preview</h2>
-            {isFullscreen && (
-              <span className="fullscreen-esc-hint">Press <strong>ESC</strong> to exit</span>
-            )}
-          </div>
-          <p>
-            {rows.length} rows checked &nbsp;•&nbsp;{' '}
-            <span style={{ color: errorRows.length > 0 ? '#e11d48' : '#059669', fontWeight: 600 }}>
-              {errorRows.length} {errorRows.length === 1 ? 'row' : 'rows'} with errors
-            </span>{' '}
-            &nbsp;•&nbsp; Showing {displayedRows.length} rows
-          </p>
-        </div>
-        
-        <div className="validation-header-controls">
-          <label className="error-filter">
-            <input
-              type="checkbox"
-              checked={errorsOnly}
-              onChange={(event) => onErrorsOnlyChange(event.target.checked)}
-            />
-            Show rows with errors only
-          </label>
-
           <button
             type="button"
-            className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+            className="history-title-toggle"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            aria-expanded={!isCollapsed}
+            title={isCollapsed ? "Click to expand worksheet preview" : "Click to collapse worksheet preview"}
           >
-            {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
-            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+            <span className="history-title-text">Interactive Worksheet Preview</span>
+            <span className="history-count-badge">{totalCount}</span>
+            <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+              <ChevronDownIcon size={16} />
+            </span>
           </button>
         </div>
+
+        {!isCollapsed && (
+          <div className="validation-header-controls">
+            {/* Integrated Compact KPI Metrics Strip */}
+            <div className="worksheet-metrics-strip">
+              <div className="ws-metric-pill is-total" title="Total records in file">
+                <span className="ws-metric-label">TOTAL CHECKED</span>
+                <span className="ws-metric-val">{totalCount}</span>
+              </div>
+
+              <div className="ws-metric-pill is-accepted" title="Valid records passed all checks">
+                <CheckCircleIcon size={13} className="ws-metric-icon" />
+                <span className="ws-metric-label">ACCEPTED</span>
+                <span className="ws-metric-val">{acceptedCount}</span>
+              </div>
+
+              <div className={`ws-metric-pill is-rejected ${errorCount > 0 ? 'has-errors' : ''}`} title="Records with validation errors">
+                <AlertTriangleIcon size={13} className="ws-metric-icon" />
+                <span className="ws-metric-label">WITH ERRORS</span>
+                <span className="ws-metric-val">{errorCount}</span>
+              </div>
+            </div>
+
+            {/* Modern Sliding Switch Toggle */}
+            <label className="ws-toggle-switch" title="Toggle to display only rows with errors">
+              <input
+                type="checkbox"
+                checked={errorsOnly}
+                onChange={(event) => onErrorsOnlyChange(event.target.checked)}
+              />
+              <span className="ws-toggle-track">
+                <span className="ws-toggle-thumb" />
+              </span>
+              <span className="ws-toggle-label">Show errors only</span>
+            </label>
+
+            {/* Fullscreen Button */}
+            <button
+              type="button"
+              className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+            >
+              {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+              <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="worksheet-scroll">
-        <table className="worksheet">
-          <thead>
-            <tr>
-              <th className="row-number-header">Row</th>
-              {columns.map((column) => (
-                <th key={column}>{columnLabels?.[column] || column}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {displayedRows.map((row) => (
-              <tr
-                key={`${row.sourceRow || row.row}-${row.row}`}
-                className={row.valid === false ? 'has-row-error' : ''}
-              >
-                <th scope="row" className="row-number">
-                  {row.sourceRow || row.row}
-                </th>
-                {columns.map((column) => {
-                  const issues = getFieldIssues(row, column)
-                  const hasError = issues.length > 0
-                  const cellVal = row.values?.[column]
-                  const displayVal = cellVal !== null && cellVal !== undefined && cellVal !== '' ? String(cellVal) : ''
-                  const colName = columnLabels?.[column] || column
-                  const tooltip = hasError
-                    ? issues.length > 1
-                      ? `Errors on ${colName}:\n${issues.map((msg, idx) => `• ${msg}`).join('\n')}`
-                      : issues[0]
-                    : undefined
+      {!isCollapsed && (
+        <>
+          <div className="worksheet-scroll">
+            <table className="worksheet">
+              <thead>
+                <tr>
+                  <th className="row-number-header">Row</th>
+                  {columns.map((column) => (
+                    <th key={column}>{columnLabels?.[column] || column}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {displayedRows.map((row) => (
+                  <tr
+                    key={`${row.sourceRow || row.row}-${row.row}`}
+                    className={row.valid === false ? 'has-row-error' : ''}
+                  >
+                    <th scope="row" className="row-number">
+                      {row.sourceRow || row.row}
+                    </th>
+                    {columns.map((column) => {
+                      const issues = getFieldIssues(row, column)
+                      const hasError = issues.length > 0
+                      const cellVal = row.values?.[column]
+                      const displayVal = cellVal !== null && cellVal !== undefined && cellVal !== '' ? String(cellVal) : ''
+                      const colName = columnLabels?.[column] || column
+                      const tooltip = hasError
+                        ? issues.length > 1
+                          ? `Errors on ${colName}:\n${issues.map((msg, idx) => `• ${msg}`).join('\n')}`
+                          : issues[0]
+                        : undefined
 
-                  return (
-                    <td
-                      key={column}
-                      className={hasError ? 'cell-error' : ''}
-                      title={tooltip}
-                      tabIndex={hasError ? 0 : undefined}
-                    >
-                      <div className="cell-content">
-                        <span className="cell-text">
-                          {displayVal || (hasError ? <span className="cell-empty">(empty)</span> : '—')}
-                        </span>
-                        {hasError && (
-                          <span className="cell-error-corner" />
-                        )}
-                      </div>
-                      {hasError && (
-                        <div className="cell-error-tooltip">
-                          <div className="cell-tooltip-header">
-                            <span className="tooltip-field-name">{colName}</span>
-                            {issues.length > 1 && (
-                              <span className="tooltip-count-badge">{issues.length} errors</span>
+                      return (
+                        <td
+                          key={column}
+                          className={hasError ? 'cell-error' : ''}
+                          title={tooltip}
+                          tabIndex={hasError ? 0 : undefined}
+                        >
+                          <div className="cell-content">
+                            <span className="cell-text">
+                              {displayVal || (hasError ? <span className="cell-empty">(empty)</span> : '—')}
+                            </span>
+                            {hasError && (
+                              <span className="cell-error-corner" />
                             )}
                           </div>
-                          <ul className="cell-tooltip-list">
-                            {issues.map((msg, idx) => (
-                              <li key={idx} className="cell-tooltip-item">
-                                <span className="tooltip-bullet">•</span>
-                                <span>{msg}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                          {hasError && (
+                            <div className="cell-error-tooltip">
+                              <div className="cell-tooltip-header">
+                                <span className="tooltip-field-name">{colName}</span>
+                                {issues.length > 1 && (
+                                  <span className="tooltip-count-badge">{issues.length} errors</span>
+                                )}
+                              </div>
+                              <ul className="cell-tooltip-list">
+                                {issues.map((msg, idx) => (
+                                  <li key={idx} className="cell-tooltip-item">
+                                    <span className="tooltip-bullet">•</span>
+                                    <span>{msg}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                {displayedRows.length === 0 && (
+                  <tr>
+                    <td className="empty-results" colSpan={Math.max(columns.length + 1, 1)}>
+                      No rows with errors found.
                     </td>
-                  )
-                })}
-              </tr>
-            ))}
-            {displayedRows.length === 0 && (
-              <tr>
-                <td className="empty-results" colSpan={Math.max(columns.length + 1, 1)}>
-                  No rows with errors found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {displayedRows.length < filteredRows.length && (
-        <button
-          type="button"
-          className="show-more-button"
-          onClick={() => setVisibleRowCount((count) => count + 75)}
-        >
-          Show 75 more rows
-        </button>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {displayedRows.length < filteredRows.length && (
+            <button
+              type="button"
+              className="show-more-button"
+              onClick={() => setVisibleRowCount((count) => count + 75)}
+            >
+              Show 75 more rows
+            </button>
+          )}
+        </>
       )}
     </section>
   )
@@ -1073,61 +1128,20 @@ export default function MemberUpload({
           />
         )}
 
-        {/* CONTAINER 3: Interactive Worksheet & Total Check Status (Unified Container) */}
-        {(activeTab === 'upload' || resolvedRole === 'broker') && validationSummary && (
-          <section className="upload-card validation-container-card" aria-label="Validation summary and worksheet">
-            {/* Total Check Status / Stats Bar KPIs */}
-            <div className="stats-bar">
-              <div className="stat-card">
-                <div className="stat-icon-badge is-total">
-                  <LayersIcon size={15} />
-                </div>
-                <div className="stat-text-group">
-                  <span className="stat-label">Total Checked</span>
-                  <span className="stat-value">{validationSummary.totalRows}</span>
-                </div>
-              </div>
-
-              <div className="stat-card-divider" />
-
-              <div className="stat-card">
-                <div className="stat-icon-badge is-accepted">
-                  <CheckCircleIcon size={15} />
-                </div>
-                <div className="stat-text-group">
-                  <span className="stat-label">Accepted</span>
-                  <span className="stat-value is-accepted">{validationSummary.acceptedRows}</span>
-                </div>
-              </div>
-
-              <div className="stat-card-divider" />
-
-              <div className="stat-card">
-                <div className="stat-icon-badge is-rejected">
-                  <AlertTriangleIcon size={15} />
-                </div>
-                <div className="stat-text-group">
-                  <span className="stat-label">With Errors</span>
-                  <span className={`stat-value ${validationSummary.rejectedCount > 0 ? 'is-rejected' : 'is-zero'}`}>
-                    {validationSummary.rejectedCount}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Worksheet */}
-            {validationResult && (
-              <div className="validation-worksheet-wrapper" style={{ marginTop: '16px' }}>
-                <ValidationPreviewBoundary previewKey={file?.name}>
-                  <ValidationWorksheet
-                    result={validationResult}
-                    errorsOnly={errorsOnly}
-                    onErrorsOnlyChange={setErrorsOnly}
-                  />
-                </ValidationPreviewBoundary>
-              </div>
-            )}
-          </section>
+        {/* CONTAINER 3: Interactive Worksheet & Integrated Status (Unified Console) */}
+        {(activeTab === 'upload' || resolvedRole === 'broker') && validationResult && (
+          <div className="validation-container-wrapper" aria-label="Validation worksheet and metrics">
+            <ValidationPreviewBoundary previewKey={file?.name}>
+              <ValidationWorksheet
+                result={validationResult}
+                validationSummary={validationSummary}
+                errorsOnly={errorsOnly}
+                onErrorsOnlyChange={setErrorsOnly}
+                role={resolvedRole}
+                isBroker={resolvedRole === 'broker'}
+              />
+            </ValidationPreviewBoundary>
+          </div>
         )}
 
         {/* Upload Mode Confirmation Modal for Brokers */}
