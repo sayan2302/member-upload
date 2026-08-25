@@ -85,7 +85,9 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
     }
   }, [isFullscreen])
 
-  const { rows, errorRows, columns } = useMemo(() => {
+  const cleanKey = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  const { rows, errorRows, columns, columnLabels } = useMemo(() => {
     const acceptedRows = Array.isArray(result?.acceptedRows) ? result.acceptedRows : []
     const rejectedRows = Array.isArray(result?.rejectedRows) ? result.rejectedRows : []
     const allRows = [...acceptedRows, ...rejectedRows]
@@ -94,7 +96,18 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
     const invalidRows = allRows.filter((row) => row.valid === false)
     const headers = [...new Set(allRows.flatMap((row) => Object.keys(row.values || {})))]
 
-    return { rows: allRows, errorRows: invalidRows, columns: headers }
+    const labelMap = {}
+    for (const row of allRows) {
+      if (Array.isArray(row.fields)) {
+        for (const f of row.fields) {
+          if (f?.colMapping && f?.fieldName) {
+            labelMap[f.colMapping] = f.fieldName
+          }
+        }
+      }
+    }
+
+    return { rows: allRows, errorRows: invalidRows, columns: headers, columnLabels: labelMap }
   }, [result])
 
   const filteredRows = errorsOnly ? errorRows : rows
@@ -102,10 +115,34 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
 
   const getIssue = (row, column) => {
     const fields = Array.isArray(row.fields) ? row.fields : []
-    const normalizedColumn = String(column).trim().toLowerCase()
-    const field = fields.find((item) => String(item?.fieldName || '').trim().toLowerCase() === normalizedColumn)
-    const remarks = Array.isArray(field?.remarks) ? field.remarks.map(asErrorText).filter(Boolean) : []
-    return field && (field.valid === false || remarks.length > 0)
+    const targetClean = cleanKey(column)
+    const targetLower = String(column || '').trim().toLowerCase()
+
+    // Find all matching field objects (by colMapping, fieldName, or normalized alphanumeric key)
+    const matchingFields = fields.filter((item) => {
+      if (!item) return false
+      const colClean = cleanKey(item.colMapping)
+      const nameClean = cleanKey(item.fieldName)
+      const colLower = String(item.colMapping || '').trim().toLowerCase()
+      const nameLower = String(item.fieldName || '').trim().toLowerCase()
+
+      return (
+        colClean === targetClean ||
+        nameClean === targetClean ||
+        colLower === targetLower ||
+        nameLower === targetLower
+      )
+    })
+
+    if (matchingFields.length === 0) return ''
+
+    // Prioritize any matching field that has errors / remarks
+    const errorField = matchingFields.find(
+      (f) => f.valid === false || (Array.isArray(f.remarks) && f.remarks.length > 0)
+    ) || matchingFields[0]
+
+    const remarks = Array.isArray(errorField.remarks) ? errorField.remarks.map(asErrorText).filter(Boolean) : []
+    return (errorField.valid === false || remarks.length > 0)
       ? remarks.join(' · ') || 'Invalid value'
       : ''
   }
@@ -158,7 +195,7 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
             <tr>
               <th className="row-number-header">Row</th>
               {columns.map((column) => (
-                <th key={column}>{column}</th>
+                <th key={column}>{columnLabels?.[column] || column}</th>
               ))}
             </tr>
           </thead>
