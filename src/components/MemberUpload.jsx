@@ -22,9 +22,14 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 const apiConfig = getApiConfig()
 
 const asErrorText = (remark) => {
-  if (typeof remark === 'string') return remark
-  if (remark && typeof remark === 'object') return remark.message || remark.reason || remark.error || JSON.stringify(remark)
-  return String(remark)
+  if (!remark) return ''
+  let text = typeof remark === 'string' ? remark : remark.message || remark.reason || remark.error || JSON.stringify(remark)
+  // Clean up ugly Joi enum lists like "one of [Mr, Miss, Mrs, Khun, , null]" -> "one of [Mr, Miss, Mrs, Khun]"
+  text = text.replace(/,\s*,\s*/g, ', ')
+  text = text.replace(/,\s*null\s*\]/gi, ']')
+  text = text.replace(/,\s*""\s*\]/gi, ']')
+  text = text.replace(/\[\s*,\s*/g, '[')
+  return text.trim()
 }
 
 function formatBytes(bytes) {
@@ -113,7 +118,7 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
   const filteredRows = errorsOnly ? errorRows : rows
   const displayedRows = filteredRows.slice(0, visibleRowCount)
 
-  const getIssue = (row, column) => {
+  const getFieldIssues = (row, column) => {
     const fields = Array.isArray(row.fields) ? row.fields : []
     const targetClean = cleanKey(column)
     const targetLower = String(column || '').trim().toLowerCase()
@@ -134,17 +139,25 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
       )
     })
 
-    if (matchingFields.length === 0) return ''
+    if (matchingFields.length === 0) return []
 
-    // Prioritize any matching field that has errors / remarks
-    const errorField = matchingFields.find(
-      (f) => f.valid === false || (Array.isArray(f.remarks) && f.remarks.length > 0)
-    ) || matchingFields[0]
+    // Collect all unique remarks from all matching field objects
+    const allRemarks = []
+    for (const f of matchingFields) {
+      if (Array.isArray(f.remarks)) {
+        for (const rem of f.remarks) {
+          const text = asErrorText(rem)
+          if (text && !allRemarks.includes(text)) {
+            allRemarks.push(text)
+          }
+        }
+      }
+      if (f.valid === false && allRemarks.length === 0) {
+        allRemarks.push('Invalid value')
+      }
+    }
 
-    const remarks = Array.isArray(errorField.remarks) ? errorField.remarks.map(asErrorText).filter(Boolean) : []
-    return (errorField.valid === false || remarks.length > 0)
-      ? remarks.join(' · ') || 'Invalid value'
-      : ''
+    return allRemarks
   }
 
   return (
@@ -209,11 +222,50 @@ export function ValidationWorksheet({ result, errorsOnly, onErrorsOnlyChange }) 
                   {row.sourceRow || row.row}
                 </th>
                 {columns.map((column) => {
-                  const issue = getIssue(row, column)
+                  const issues = getFieldIssues(row, column)
+                  const hasError = issues.length > 0
+                  const cellVal = row.values?.[column]
+                  const displayVal = cellVal !== null && cellVal !== undefined && cellVal !== '' ? String(cellVal) : ''
+                  const colName = columnLabels?.[column] || column
+                  const tooltip = hasError
+                    ? issues.length > 1
+                      ? `Errors on ${colName}:\n${issues.map((msg, idx) => `• ${msg}`).join('\n')}`
+                      : issues[0]
+                    : undefined
+
                   return (
-                    <td key={column} className={issue ? 'cell-error' : ''} title={issue || undefined}>
-                      <span>{row.values?.[column] ?? ''}</span>
-                      {issue && <small>{issue}</small>}
+                    <td
+                      key={column}
+                      className={hasError ? 'cell-error' : ''}
+                      title={tooltip}
+                      tabIndex={hasError ? 0 : undefined}
+                    >
+                      <div className="cell-content">
+                        <span className="cell-text">
+                          {displayVal || (hasError ? <span className="cell-empty">(empty)</span> : '—')}
+                        </span>
+                        {hasError && (
+                          <span className="cell-error-corner" />
+                        )}
+                      </div>
+                      {hasError && (
+                        <div className="cell-error-tooltip">
+                          <div className="cell-tooltip-header">
+                            <span className="tooltip-field-name">{colName}</span>
+                            {issues.length > 1 && (
+                              <span className="tooltip-count-badge">{issues.length} errors</span>
+                            )}
+                          </div>
+                          <ul className="cell-tooltip-list">
+                            {issues.map((msg, idx) => (
+                              <li key={idx} className="cell-tooltip-item">
+                                <span className="tooltip-bullet">•</span>
+                                <span>{msg}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </td>
                   )
                 })}

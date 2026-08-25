@@ -1304,22 +1304,159 @@ button {
 }
 
 .worksheet td {
-  padding: 8px 12px;
+  position: relative;
+  padding: 6px 10px;
   color: #1e293b;
   white-space: nowrap;
+  height: 36px;
+  max-height: 36px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  font-size: 13px;
 }
 
 .worksheet td.cell-error {
-  background: #fee2e2;
-  color: #991b1b;
-  font-weight: 500;
+  background: #fff1f2 !important;
+  border-bottom: 1px solid #fecdd3 !important;
+  cursor: help;
 }
 
-.worksheet td.cell-error small {
+.worksheet .cell-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.worksheet .cell-text {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.worksheet td.cell-error .cell-text {
+  color: #be123c;
+  font-weight: 600;
+}
+
+.worksheet .cell-empty {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Red top-right corner marker (Excel-style error indicator) */
+.worksheet .cell-error-corner {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid #e11d48;
+  border-left: 7px solid transparent;
+}
+
+/* Floating Rich Tooltip on Hover / Focus */
+.worksheet .cell-error-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  min-width: 200px;
+  max-width: 320px;
+  white-space: normal;
+  pointer-events: none;
+  animation: fadeInTooltip 0.15s ease-out;
+}
+
+.worksheet .cell-error-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+.worksheet td.cell-error:hover .cell-error-tooltip,
+.worksheet td.cell-error:focus .cell-error-tooltip,
+.worksheet td.cell-error:focus-within .cell-error-tooltip {
   display: block;
+}
+
+.worksheet .cell-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.worksheet .tooltip-field-name {
   font-size: 11px;
-  color: #b91c1c;
-  margin-top: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.worksheet .tooltip-count-badge {
+  background: rgba(225, 29, 72, 0.35);
+  border: 1px solid rgba(225, 29, 72, 0.7);
+  color: #fca5a5;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+.worksheet .cell-tooltip-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.worksheet .cell-tooltip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #f1f5f9;
+}
+
+.worksheet .tooltip-bullet {
+  color: #fb7185;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+@keyframes fadeInTooltip {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .empty-results {
