@@ -65,9 +65,7 @@ export function CorporatePolicySelector({
 
   const titleText = isSingle
     ? 'Associated Corporate'
-    : isBroker
-    ? 'Assigned Client Companies'
-    : 'Associated Sub-Corporates'
+    : 'Associated Corporates'
 
   return (
     <section 

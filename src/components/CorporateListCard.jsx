@@ -55,9 +55,9 @@ export function CorporateListCard({ corporates = [], role = 'hr' }) {
           <span className="corporate-icon">🏢</span>
           <div>
             <h3 className="corporate-title">
-              {isBroker
-                ? `Assigned Client Companies (${corporates.length})`
-                : 'Associated Corporate Name'}
+              {isSingle
+                ? 'Associated Corporate'
+                : `Associated Corporates (${corporates.length})`}
             </h3>
             <p className="corporate-subtitle">
               Copy and paste the exact company name into your Excel spreadsheet (Column A) to prevent validation errors.
