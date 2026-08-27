@@ -50,6 +50,12 @@ function DevApp() {
     { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
     { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
     { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+    { id: '411935', pol_id: '411935', policy_no: 'DEN_BPS_2026_01', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
+    { id: '411936', pol_id: '411936', policy_no: 'MAT_BPS_2026_02', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
+    { id: '411937', pol_id: '411937', policy_no: 'VIS_BPS_2026_03', policy_name: 'Vision Care Standard', corp_id: '1422104' },
+    { id: '411938', pol_id: '411938', policy_no: 'LIFE_BPS_2026_04', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
+    { id: '411939', pol_id: '411939', policy_no: 'PA_BPS_2026_05', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
+    { id: '411940', pol_id: '411940', policy_no: 'CI_BPS_2026_06', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
   ]
 
   if (isGroupHR) {
@@ -70,6 +76,14 @@ function DevApp() {
     ]
     mockPolicies = [
       { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
+      { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
+      { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+      { id: '411935', pol_id: '411935', policy_no: 'DEN_BPS_2026_01', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
+      { id: '411936', pol_id: '411936', policy_no: 'MAT_BPS_2026_02', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
+      { id: '411937', pol_id: '411937', policy_no: 'VIS_BPS_2026_03', policy_name: 'Vision Care Standard', corp_id: '1422104' },
+      { id: '411938', pol_id: '411938', policy_no: 'LIFE_BPS_2026_04', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
+      { id: '411939', pol_id: '411939', policy_no: 'PA_BPS_2026_05', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
+      { id: '411940', pol_id: '411940', policy_no: 'CI_BPS_2026_06', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
       { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', policy_name: 'Group Health Standard', corp_id: '1422135' },
       { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
     ]

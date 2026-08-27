@@ -4,6 +4,11 @@ import { CorporatePolicySelector } from './CorporatePolicySelector.jsx'
 import { UploadHistory } from './UploadHistory.jsx'
 import { BrokerDashboard } from './BrokerDashboard.jsx'
 import { BrokerUploadModal } from './BrokerUploadModal.jsx'
+import { GuidelinesModal } from './GuidelinesModal.jsx'
+import { InteractiveVideoSimulator } from './InteractiveVideoSimulator.jsx'
+import { PlatformGuidePage } from './PlatformGuidePage.jsx'
+import { FileAuditConsole } from './FileAuditConsole.jsx'
+import { downloadFile } from '../utils/fileDownloader.js'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -17,6 +22,7 @@ import {
   MinimizeIcon,
   LayersIcon,
   ChevronDownIcon,
+  BookOpenIcon,
 } from './Icons.jsx'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -80,7 +86,23 @@ export function ValidationWorksheet({
 }) {
   const [visibleRowCount, setVisibleRowCount] = useState(75)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mayfair_accordion_validation_worksheet_collapsed')
+      if (saved !== null) return saved === 'true'
+    } catch (_) {}
+    return false
+  })
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('mayfair_accordion_validation_worksheet_collapsed', String(next))
+      } catch (_) {}
+      return next
+    })
+  }
 
   const totalCount = validationSummary?.totalRows ?? result?.summary?.totalRows ?? 0
   const acceptedCount = validationSummary?.acceptedRows ?? result?.summary?.acceptedRows ?? 0
@@ -186,7 +208,7 @@ export function ValidationWorksheet({
           <button
             type="button"
             className="history-title-toggle"
-            onClick={() => setIsCollapsed(prev => !prev)}
+            onClick={toggleCollapsed}
             aria-expanded={!isCollapsed}
             title={isCollapsed ? "Click to expand worksheet preview" : "Click to collapse worksheet preview"}
           >
@@ -349,6 +371,7 @@ export default function MemberUpload({
   brokerId,
   optionsUrl,
   corporates: initialCorporates,
+  policies: initialPolicies,
 } = {}) {
   const resolvedRole = (role || 'hr').toLowerCase()
   const firstCorpId = Array.isArray(initialCorporates) && initialCorporates.length > 0 && initialCorporates[0].id && initialCorporates[0].id !== '0'
@@ -362,10 +385,28 @@ export default function MemberUpload({
     if (Array.isArray(initialCorporates) && initialCorporates.length > 0) return initialCorporates
     return resolvedRole === 'broker'
       ? [
+          { id: '1422104', name: 'Bangkok Patana School' },
           { id: '1422135', name: 'A3 Test industries' },
           { id: '1422138', name: 'ELTS Corporate' },
         ]
       : [{ id: defaultCorpId, name: 'ELTS Corporate' }]
+  })
+
+  const [policies, setPolicies] = useState(() => {
+    if (Array.isArray(initialPolicies) && initialPolicies.length > 0) return initialPolicies
+    return resolvedRole === 'broker'
+      ? [
+          { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
+          { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
+          { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+          { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', policy_name: 'Group Health Standard', corp_id: '1422135' },
+          { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+        ]
+      : [
+          { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: defaultCorpId },
+          { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: defaultCorpId },
+          { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: defaultCorpId },
+        ]
   })
 
   const [file, setFile] = useState(null)
@@ -385,12 +426,92 @@ export default function MemberUpload({
   const [submissionReceipt, setSubmissionReceipt] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [successModal, setSuccessModal] = useState(null)
-  const [activeTab, setActiveTab] = useState(resolvedRole === 'broker' ? 'dashboard' : 'upload')
+  
+  // Support dedicated ?view=audit, ?view=guide or ?tab=guide routing, and remember user tabs in localStorage
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const viewParam = params.get('view') || params.get('tab')
+      if (viewParam === 'audit') return 'audit'
+      if (viewParam === 'guide') return 'guide'
+      if (viewParam === 'history') return 'history'
+      if (viewParam === 'dashboard' && resolvedRole === 'broker') return 'dashboard'
+
+      // Check saved tab in localStorage
+      const savedTab = localStorage.getItem(`mayfair_member_upload_tab_${resolvedRole}`)
+      if (savedTab && ['upload', 'history', 'guide', 'dashboard'].includes(savedTab)) {
+        if (resolvedRole === 'broker') {
+          return savedTab === 'guide' ? 'guide' : 'dashboard'
+        }
+        return savedTab
+      }
+    } catch {
+      // Fallback if URL parsing fails
+    }
+    return resolvedRole === 'broker' ? 'dashboard' : 'upload'
+  })
+
+  const [auditTargetUuid, setAuditTargetUuid] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      return params.get('file_uuid') || null
+    } catch {
+      return null
+    }
+  })
+
+  const handleOpenAudit = (uuid) => {
+    setAuditTargetUuid(uuid)
+    setActiveTab('audit')
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', 'audit')
+      url.searchParams.set('file_uuid', uuid)
+      window.history.pushState(null, '', url.toString())
+    } catch (_) {}
+  }
+
+  const handleCloseAudit = () => {
+    setAuditTargetUuid(null)
+    const returnTab = resolvedRole === 'broker' ? 'dashboard' : 'history'
+    setActiveTab(returnTab)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('view')
+      url.searchParams.delete('file_uuid')
+      if (returnTab === 'history') url.searchParams.set('view', 'history')
+      window.history.pushState(null, '', url.toString())
+    } catch (_) {}
+  }
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab)
+    try {
+      localStorage.setItem(`mayfair_member_upload_tab_${resolvedRole}`, newTab)
+      const url = new URL(window.location.href)
+      if (newTab === 'upload' && resolvedRole !== 'broker') {
+        url.searchParams.delete('view')
+        url.searchParams.delete('tab')
+      } else if (newTab === 'dashboard' && resolvedRole === 'broker') {
+        url.searchParams.delete('view')
+        url.searchParams.delete('tab')
+      } else {
+        url.searchParams.set('view', newTab)
+      }
+      window.history.replaceState(null, '', url.toString())
+    } catch {
+      // Ignore in non-browser environments
+    }
+  }
+
   const [brokerTargetItem, setBrokerTargetItem] = useState(null)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [progressState, setProgressState] = useState(null)
   const [currentFileUuid, setCurrentFileUuid] = useState(null)
   const [uploadModeModal, setUploadModeModal] = useState(null)
+  const [showGuideModal, setShowGuideModal] = useState(false)
+  const [allowBrokerForceIngest, setAllowBrokerForceIngest] = useState(false)
+  const [showForceUploadConfirmModal, setShowForceUploadConfirmModal] = useState(false)
 
   const inputRef = useRef(null)
 
@@ -400,11 +521,13 @@ export default function MemberUpload({
       if (e.key === 'Escape') {
         if (successModal) setSuccessModal(null)
         if (uploadModeModal) setUploadModeModal(null)
+        if (showGuideModal) setShowGuideModal(false)
+        if (showForceUploadConfirmModal) setShowForceUploadConfirmModal(false)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [successModal, uploadModeModal])
+  }, [successModal, uploadModeModal, showGuideModal, showForceUploadConfirmModal])
 
   // Optional: fetch live corporate options if optionsUrl is provided in .NET
   useEffect(() => {
@@ -499,7 +622,7 @@ export default function MemberUpload({
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  const downloadTemplate = async () => {
+  const downloadTemplate = () => {
     setIsDownloading(true)
     setMessage('')
 
@@ -521,33 +644,13 @@ export default function MemberUpload({
       }
 
       const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?${params.toString()}`
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: { 'x-api-key': apiConfig.apiKey },
-      })
-      if (!response.ok) throw new Error(`Template download failed (${response.status})`)
-
-      const blob = await response.blob()
-      const rawHeaderFilename = response.headers
-        .get('content-disposition')
-        ?.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)?.[1]
-        ?.replace(/['"]/g, '')
-
-      const defaultRoleFilename =
-        resolvedRole === 'broker'
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
+      downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
     } catch (err) {
+      console.error('[Download Template] Error:', err)
       setMessage('Unable to download template. Please try again.')
       setMessageType('error')
     } finally {
-      setIsDownloading(false)
+      setTimeout(() => setIsDownloading(false), 1500)
     }
   }
 
@@ -599,11 +702,14 @@ export default function MemberUpload({
         setCurrentFileUuid(data.uuid || data.file_uuid)
       }
 
+      const forceAllowed = data.allowBrokerForceIngest === true || data.allow_broker_force_ingest === true
+      setAllowBrokerForceIngest(forceAllowed)
+
       const acceptedRows = Array.isArray(data.acceptedRows) ? data.acceptedRows : []
       const rejectedRows = Array.isArray(data.rejectedRows) ? data.rejectedRows : []
-      const totalRows = (data.totalRows != null ? data.totalRows : acceptedRows.length + rejectedRows.length) || 0
-      const acceptedCount = (data.acceptedCount != null ? data.acceptedCount : acceptedRows.length) || 0
-      const rejectedCount = (data.rejectedCount != null ? data.rejectedCount : rejectedRows.length) || 0
+      const totalRows = (data.summary?.totalRows ?? data.totalRows ?? (acceptedRows.length + rejectedRows.length)) || 0
+      const acceptedCount = (data.summary?.acceptedRows ?? data.acceptedCount ?? acceptedRows.length) || 0
+      const rejectedCount = (data.summary?.rejectedRows ?? data.rejectedCount ?? rejectedRows.length) || 0
 
       setValidationSummary({
         totalRows,
@@ -634,11 +740,13 @@ export default function MemberUpload({
   }
 
   // Phase 1: Upload to S3 and save metadata in enrollment_file_metadata table
-  const submitToS3 = async () => {
-    if (!file || !validationPassed) return
+  const submitToS3 = async (isForce = false) => {
+    if (!file) return
+    if (!validationPassed && !isForce) return
 
     setIsSubmitting(true)
     setMessage('')
+    setShowForceUploadConfirmModal(false)
 
     try {
       const isGroupHr = resolvedRole === 'hr' && Array.isArray(corporates) && corporates.length > 1;
@@ -657,11 +765,50 @@ export default function MemberUpload({
       formData.append('template_type', resolvedRole === 'broker' ? 'broker' : 'hr')
       formData.append('no_of_rows', String(validationSummary?.totalRows || 0))
       formData.append('valid_rows', String(validationSummary?.acceptedRows || 0))
-      formData.append('invalid_rows', '0')
+      formData.append('invalid_rows', String(isForce ? (validationSummary?.rejectedCount || 0) : 0))
       formData.append('status', resolvedRole === 'broker' ? 'approved' : 'pending')
+      if (isForce) {
+        formData.append('force_ingest', 'true')
+      }
+
+      // Package and forward complete row-by-row snapshot with error remarks
+      if (validationResult) {
+        const allRows = [
+          ...(validationResult?.acceptedRows || []).map((r) => ({
+            row: r.row || r.rowIndex || 1,
+            sourceRow: r.sourceRow || r.rowIndex || 3,
+            valid: true,
+            values: r.values || r.data || r,
+            errors: [],
+          })),
+          ...(validationResult?.rejectedRows || []).map((r) => ({
+            row: r.row || r.rowIndex || 1,
+            sourceRow: r.sourceRow || r.rowIndex || 3,
+            valid: false,
+            values: r.values || r.data || r,
+            errors: Array.isArray(r.errors)
+              ? r.errors.map((e) => (typeof e === 'string' ? { field: '', message: e } : { field: e.field || e.column || '', message: e.message || e.error || '' }))
+              : (r.fields || [])
+                  .filter((f) => !f.valid)
+                  .map((f) => ({
+                    field: f.fieldName || f.colMapping,
+                    message: (f.remarks || []).join('; '),
+                  })),
+          })),
+        ].sort((a, b) => (a.sourceRow || a.row) - (b.sourceRow || b.row))
+
+        const worksheetSnapshot = {
+          totalRows: validationSummary?.totalRows || allRows.length,
+          acceptedRows: validationSummary?.acceptedRows || 0,
+          rejectedRows: isForce ? (validationSummary?.rejectedCount || 0) : (validationSummary?.rejectedCount || 0),
+          headers: allRows[0]?.values && typeof allRows[0].values === 'object' ? Object.keys(allRows[0].values) : [],
+          rows: allRows,
+        }
+        formData.append('worksheet_snapshot', JSON.stringify(worksheetSnapshot))
+      }
 
       if (resolvedRole === 'broker') {
-        setProgressState({ stage: 'uploading', message: 'Uploading file to S3...', percent: 10 })
+        setProgressState({ stage: 'uploading', message: 'Uploading file...', percent: 10 })
 
         const response = await fetch(`${apiConfig.apiBaseUrl}/uploads3`, {
           method: 'POST',
@@ -686,6 +833,7 @@ export default function MemberUpload({
           while (true) {
             const { done, value } = await reader.read()
             if (done) break
+
             streamBuffer += decoder.decode(value, { stream: true })
             const blocks = streamBuffer.split('\n\n')
             streamBuffer = blocks.pop() || ''
@@ -697,20 +845,20 @@ export default function MemberUpload({
               try {
                 const data = JSON.parse(jsonText)
                 if (data.stage === 'uploading') {
-                  setProgressState({ stage: 'uploading', message: data.message || 'Uploading to S3...', percent: 20 })
+                  setProgressState({ stage: 'uploading', message: 'Uploading file...', percent: 20 })
                 } else if (data.stage === 'uploaded') {
-                  setProgressState({ stage: 'uploaded', message: data.message || 'File saved to S3', percent: 35 })
+                  setProgressState({ stage: 'uploaded', message: 'File uploaded successfully', percent: 35 })
                 } else if (data.stage === 'parsing') {
-                  setProgressState({ stage: 'parsing', message: data.message || 'Parsing Excel workbook...', percent: 50 })
+                  setProgressState({ stage: 'parsing', message: 'Parsing Excel workbook...', percent: 50 })
                 } else if (data.stage === 'transforming') {
-                  setProgressState({ stage: 'transforming', message: data.message || 'Preparing records...', percent: 65 })
+                  setProgressState({ stage: 'transforming', message: 'Preparing records...', percent: 65 })
                 } else if (data.stage === 'inserting' || data.stage === 'progress') {
-                  const total = data.total || validationSummary?.acceptedRows || 1
+                  const total = data.total || validationSummary?.totalRows || 1
                   const inserted = data.inserted || 0
                   const calculatedPercent = 65 + Math.round((inserted / total) * 32)
                   setProgressState({
                     stage: 'inserting',
-                    message: data.message || `Inserting records into database (${inserted}/${total})...`,
+                    message: `Processing member records (${inserted}/${total})...`,
                     percent: Math.min(calculatedPercent, 97),
                     inserted,
                     total,
@@ -719,12 +867,12 @@ export default function MemberUpload({
                   finalSuccessPayload = data
                   setProgressState({
                     stage: 'complete',
-                    message: data.message || `Successfully processed and inserted ${data.records_inserted} member records!`,
+                    message: `Successfully processed ${data.records_inserted} member records!`,
                     percent: 100,
                     records_inserted: data.records_inserted,
                   })
                 } else if (data.stage === 'error') {
-                  throw new Error(data.message || 'Database ingestion failed on the server.')
+                  throw new Error(data.message || 'File processing failed on the server.')
                 }
               } catch (err) {
                 if (err.message && !err.message.includes('JSON')) {
@@ -736,12 +884,14 @@ export default function MemberUpload({
         }
 
         const submissionUuid = finalSuccessPayload?.uuid || `SUB-${Date.now()}`
-        const finalCount = finalSuccessPayload?.records_inserted ?? validationSummary?.acceptedRows ?? 0
+        const finalCount = finalSuccessPayload?.records_inserted ?? validationSummary?.totalRows ?? 0
 
         setSuccessModal({
           uuid: submissionUuid,
           fileName: file.name,
           rowCount: finalCount,
+          wasForceIngested: isForce,
+          bypassedErrors: isForce ? (validationSummary?.rejectedCount || 0) : 0,
         })
 
         // Auto-refresh the submissions table in Container 2
@@ -783,7 +933,7 @@ export default function MemberUpload({
       setProgressState(null)
       if (inputRef.current) inputRef.current.value = ''
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to submit file to S3. Please try again.')
+      setMessage(error instanceof Error ? error.message : 'Unable to submit file. Please try again.')
       setMessageType('error')
       setProgressState(null)
       console.error(error)
@@ -792,13 +942,39 @@ export default function MemberUpload({
     }
   }
 
+  // ── SEPARATE ROUTE: Time-Travel Audit History Console (?view=audit&file_uuid=...) ─
+  if (activeTab === 'audit' && auditTargetUuid) {
+    return (
+      <FileAuditConsole
+        fileUuid={auditTargetUuid}
+        role={resolvedRole}
+        apiConfig={apiConfig}
+        onBack={handleCloseAudit}
+      />
+    )
+  }
+
+  // ── SEPARATE ROUTE: Platform User Guide & Live Simulator (?view=guide) ───
+  if (activeTab === 'guide') {
+    return (
+      <main className="page-shell">
+        <div className="content-stack">
+          <PlatformGuidePage
+            initialRole={resolvedRole}
+            onBackToUpload={() => handleTabChange(resolvedRole === 'broker' ? 'dashboard' : 'upload')}
+          />
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="page-shell">
       <div className="content-stack">
         {/* Main Card */}
         <section className="upload-card" aria-label="Member upload">
           {/* Header */}
-          <div className="upload-card-header">
+          <div className="upload-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <h2 className="upload-section-title">Member Data Upload</h2>
               <p className="upload-section-subtitle">
@@ -807,6 +983,16 @@ export default function MemberUpload({
                   : 'Upload your completed Excel workbook to run instant validation checks before final submission to broker.'}
               </p>
             </div>
+
+            <button
+              type="button"
+              className="open-guide-modal-btn"
+              onClick={() => handleTabChange('guide')}
+              title="Open Do's & Don'ts Documentation and Guidelines"
+            >
+              <BookOpenIcon size={15} />
+              <span>Guidelines &amp; Rules</span>
+            </button>
           </div>
 
           {/* Modern Navigation Tabs (HR Only) */}
@@ -818,17 +1004,17 @@ export default function MemberUpload({
                   role="tab"
                   aria-selected={activeTab === 'upload'}
                   className={`upload-tab-btn ${activeTab === 'upload' ? 'is-active' : ''}`}
-                  onClick={() => setActiveTab('upload')}
+                  onClick={() => handleTabChange('upload')}
                 >
                   <UploadCloudIcon size={16} />
-                  <span>Upload & Validate</span>
+                  <span>Upload &amp; Validate</span>
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={activeTab === 'history'}
                   className={`upload-tab-btn ${activeTab === 'history' ? 'is-active' : ''}`}
-                  onClick={() => setActiveTab('history')}
+                  onClick={() => handleTabChange('history')}
                 >
                   <ClockIcon size={16} />
                   <span>Past Uploads</span>
@@ -951,7 +1137,7 @@ export default function MemberUpload({
                     <button
                       type="button"
                       className="submit-button"
-                      onClick={submitToS3}
+                      onClick={() => submitToS3(false)}
                       disabled={isSubmitting || !file}
                     >
                       <SendIcon size={14} />
@@ -962,14 +1148,28 @@ export default function MemberUpload({
                       </span>
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      className="upload-button"
-                      onClick={validateFile}
-                      disabled={isValidating || isSubmitting || !file || submitSuccess}
-                    >
-                      {isValidating ? 'Validating…' : submitSuccess ? 'Submitted' : 'Validate File'}
-                    </button>
+                    <>
+                      {resolvedRole === 'broker' && validationResult && !validationPassed && allowBrokerForceIngest && (
+                        <button
+                          type="button"
+                          className="force-upload-btn"
+                          onClick={() => setShowForceUploadConfirmModal(true)}
+                          disabled={isValidating || isSubmitting || !file}
+                          title="Force upload and ingest member records into database despite validation errors"
+                        >
+                          <AlertTriangleIcon size={14} />
+                          <span>Upload Anyway (Contains Errors)</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="upload-button"
+                        onClick={validateFile}
+                        disabled={isValidating || isSubmitting || !file || submitSuccess}
+                      >
+                        {isValidating ? 'Validating…' : submitSuccess ? 'Submitted' : 'Validate File'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -988,6 +1188,97 @@ export default function MemberUpload({
                     )}
                   </span>
                   <span className="message-text">{message}</span>
+                </div>
+              )}
+
+              {/* Force Ingestion Confirmation Warning Modal for Brokers */}
+              {showForceUploadConfirmModal && (
+                <div
+                  className="success-modal-overlay"
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={() => setShowForceUploadConfirmModal(false)}
+                >
+                  <div
+                    className="success-modal-card force-modal-card"
+                    style={{ maxWidth: '520px', textAlign: 'left', padding: '26px 28px' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="modal-close-icon-btn"
+                      onClick={() => setShowForceUploadConfirmModal(false)}
+                      title="Close"
+                    >
+                      ×
+                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                      <div style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        background: '#fef3c7',
+                        color: '#d97706',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 0 0 4px #fffbeb'
+                      }}>
+                        <AlertTriangleIcon size={26} />
+                      </div>
+                      <div>
+                        <h3 className="success-modal-title" style={{ margin: 0, fontSize: '18px', color: '#92400e' }}>
+                          Upload With Validation Errors?
+                        </h3>
+                        <p style={{ margin: '3px 0 0 0', fontSize: '12.5px', color: '#78350f' }}>
+                          Bypass validation and force-ingest rows directly into the database.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="force-modal-stats-grid">
+                      <div className="force-stat-box">
+                        <span className="force-stat-label">Total Rows</span>
+                        <span className="force-stat-value">{validationSummary?.totalRows || 0}</span>
+                      </div>
+                      <div className="force-stat-box is-valid">
+                        <span className="force-stat-label">Clean Rows</span>
+                        <span className="force-stat-value">{validationSummary?.acceptedRows || 0}</span>
+                      </div>
+                      <div className="force-stat-box is-faulty">
+                        <span className="force-stat-label">Faulty Rows</span>
+                        <span className="force-stat-value">{validationSummary?.rejectedCount || 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="force-modal-notice-box">
+                      <AlertTriangleIcon size={16} />
+                      <span>
+                        <strong>Important:</strong> 100% of rows will be processed and enrolled. Unparseable dates and malformed values will be converted to safe fallbacks and tagged in the audit trail.
+                      </span>
+                    </div>
+
+                    <div className="success-modal-actions" style={{ marginTop: '22px' }}>
+                      <button
+                        type="button"
+                        className="modal-btn-secondary"
+                        onClick={() => setShowForceUploadConfirmModal(false)}
+                      >
+                        Cancel & Fix Sheet
+                      </button>
+                      <button
+                        type="button"
+                        className="modal-btn-primary force-confirm-btn"
+                        onClick={() => submitToS3(true)}
+                        disabled={isSubmitting}
+                      >
+                        <SendIcon size={14} />
+                        <span>{isSubmitting ? 'Force Ingesting…' : 'Confirm & Upload Anyway'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1018,14 +1309,24 @@ export default function MemberUpload({
                     </div>
 
                     <h3 id="success-modal-title" className="success-modal-title">
-                      File Submitted Successfully!
+                      {successModal.wasForceIngested ? 'File Ingested with Bypassed Errors' : 'File Submitted Successfully!'}
                     </h3>
 
                     <p className="success-modal-desc">
                       {resolvedRole === 'broker' 
-                        ? 'Your fresh spreadsheet has been uploaded to S3 and approved.'
-                        : 'Your spreadsheet has been uploaded to S3 and queued for broker review.'}
+                        ? (successModal.wasForceIngested 
+                            ? 'Your spreadsheet has been submitted and member records were processed with fallback sanitization.'
+                            : 'Your fresh spreadsheet has been submitted and approved.')
+                        : 'Your spreadsheet has been submitted successfully and queued for broker review.'}
                     </p>
+
+                    {successModal.wasForceIngested && (
+                      <div className="force-success-badge-strip">
+                        <span className="force-badge-pill">
+                          ⚠️ Ingested with {successModal.bypassedErrors} Bypassed Error{successModal.bypassedErrors === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="success-modal-ref-card">
                       <div className="ref-card-meta" style={{ justifyContent: 'center' }}>
@@ -1073,23 +1374,25 @@ export default function MemberUpload({
                 apiConfig={apiConfig}
                 refreshTrigger={successModal?.uuid || submissionReceipt?.uuid}
                 onNavigateToUpload={() => setActiveTab('upload')}
+                onOpenAudit={handleOpenAudit}
               />
             </div>
           )}
         </section>
 
-        {/* CONTAINER 2: Assigned Client Companies (Separate Collapsible Card) */}
+        {/* CONTAINER 2: Assigned Client Companies & Policies (Separate Collapsible Card) */}
         {(activeTab === 'upload' || resolvedRole === 'broker') && corporates && corporates.length > 0 && (
           <CorporatePolicySelector
             role={resolvedRole}
             corporates={corporates}
+            policies={policies}
             defaultCollapsed={true}
           />
         )}
 
-        {/* CONTAINER 3: HR File Submissions (Separate Container) */}
+        {/* CONTAINER 3: File Submissions (Separate Container) */}
         {resolvedRole === 'broker' && (
-          <section className="upload-card submissions-container-card" aria-label="HR File Submissions">
+          <section className="upload-card submissions-container-card" aria-label="File Submissions">
             <BrokerDashboard
               brokerId={defaultBrokerId}
               corporates={corporates}
@@ -1098,6 +1401,7 @@ export default function MemberUpload({
               onOpenUploadModal={(item) => {
                 setBrokerTargetItem(item)
               }}
+              onOpenAudit={handleOpenAudit}
               hasValidationErrors={!!validationSummary && validationSummary.rejectedCount > 0}
             />
           </section>
@@ -1170,7 +1474,7 @@ export default function MemberUpload({
                     Confirm Upload Mode
                   </h3>
                   <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
-                    Are you uploading a new fresh file or revising an HR file?
+                    Are you uploading a new fresh file or revising an existing file?
                   </p>
                 </div>
               </div>
@@ -1202,10 +1506,10 @@ export default function MemberUpload({
                   <span style={{ fontSize: '16px', marginTop: '1px' }}>🔄</span>
                   <div>
                     <strong style={{ color: '#0f172a', display: 'block', marginBottom: '2px' }}>
-                      Revise an Existing HR Submission?
+                      Revise an Existing Submission?
                     </strong>
                     <span style={{ color: '#64748b', lineHeight: 1.4 }}>
-                      If you are fixing errors for a file submitted by HR, use the <strong>Upload</strong> button on that file's row in the <strong>HR File Submissions</strong> table below to keep the audit history linked.
+                      If you are fixing errors for a previously submitted file, use the <strong>Upload</strong> button on that file's row in the <strong>File Submissions</strong> table below to keep the audit history linked.
                     </span>
                   </div>
                 </div>
@@ -1230,6 +1534,13 @@ export default function MemberUpload({
             </div>
           </div>
         )}
+
+        {/* Full-Screen Interactive Guidelines & Best Practices Modal */}
+        <GuidelinesModal
+          isOpen={showGuideModal}
+          onClose={() => setShowGuideModal(false)}
+          currentRole={resolvedRole}
+        />
       </div>
     </main>
   )

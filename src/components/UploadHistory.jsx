@@ -6,8 +6,20 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
   ClockIcon,
-  SearchIcon
+  SearchIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  TrashIcon,
+  LockIcon,
+  CloseIcon,
+  InfoIcon,
+  MessageSquareIcon
 } from './Icons.jsx'
+import { SortDropdown } from './SortDropdown.jsx'
+import { StatusFilterDropdown } from './StatusFilterDropdown.jsx'
+import { downloadFile } from '../utils/fileDownloader.js'
+import { DateRangeFilterDropdown } from './DateRangeFilterDropdown.jsx'
 
 export function UploadHistory({
   corpId,
@@ -16,12 +28,26 @@ export function UploadHistory({
   apiConfig,
   refreshTrigger,
   onNavigateToUpload,
+  onOpenAudit,
 }) {
   const [historyItems, setHistoryItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [downloadingUuid, setDownloadingUuid] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'pending' | 'approved' | 'failed'
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [sortBy, setSortBy] = useState('date') // 'date' | 'name' | 'records'
+  const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
+
+  // Delete / Recall states
+  const [itemToDelete, setItemToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+  const [deleteSuccessToast, setDeleteSuccessToast] = useState(null)
+  const [activeFeedbackItem, setActiveFeedbackItem] = useState(null)
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true)
@@ -69,39 +95,77 @@ export function UploadHistory({
     }
   }, [apiConfig, corpId, corporates, role])
 
+  const handleManualRefresh = async () => {
+    setIsManualRefreshing(true)
+    try {
+      await fetchHistory()
+    } finally {
+      setTimeout(() => {
+        setIsManualRefreshing(false)
+      }, 650)
+    }
+  }
+
   useEffect(() => {
     fetchHistory()
   }, [fetchHistory, refreshTrigger])
 
-  const handleDownload = async (item) => {
+  const handleDownload = (item) => {
     if (!item.uuid || downloadingUuid) return
 
     setDownloadingUuid(item.uuid)
     try {
-      const downloadUrl = `${apiConfig.apiBaseUrl}/uploads3/download/${item.uuid}?role=hr`
-      const response = await fetch(downloadUrl, {
-        headers: { 'x-api-key': apiConfig.apiKey },
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Download failed (${response.status})`)
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = item.fileName || 'enrollment.xlsx'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
+      const downloadUrl = `${apiConfig.apiBaseUrl}/uploads3/download/${item.uuid}?role=${encodeURIComponent(role || 'hr')}`
+      downloadFile(downloadUrl, item.fileName || 'enrollment.xlsx')
     } catch (err) {
       console.error('[UploadHistory] Download error:', err)
       setError(err instanceof Error ? err.message : 'Could not download the file.')
     } finally {
-      setDownloadingUuid(null)
+      setTimeout(() => setDownloadingUuid(null), 1500)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return
+    setIsDeleting(true)
+    setDeleteError(null)
+
+    try {
+      const response = await fetch(
+        `${apiConfig.apiBaseUrl}/uploads3/${itemToDelete.uuid}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'x-api-key': apiConfig.apiKey,
+            'x-user-id': 'hr_admin',
+            'x-user-email': itemToDelete.uploadedByEmail || 'hr.admin@mayfair.com',
+          },
+        }
+      )
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error(
+            data.error ||
+              `Cannot delete file: This submission is currently locked by a broker for underwriting review. Please ask the broker to unlock it first.`
+          )
+        }
+        throw new Error(data.error || `Failed to delete file (${response.status})`)
+      }
+
+      // Success
+      const deletedName = itemToDelete.fileName
+      setItemToDelete(null)
+      setDeleteSuccessToast(`Submission "${deletedName}" was successfully removed.`)
+      setTimeout(() => setDeleteSuccessToast(null), 4500)
+      fetchHistory()
+    } catch (err) {
+      console.error('[UploadHistory] Delete error:', err)
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete the file.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -121,8 +185,8 @@ export function UploadHistory({
     }
   }
 
-  const getStatusBadge = (status) => {
-    const s = String(status || 'pending').toLowerCase()
+  const getStatusBadge = (item) => {
+    const s = String(item.status || 'pending').toLowerCase()
     if (s === 'approved' || s === 'completed') {
       return (
         <span className="history-badge is-approved">
@@ -133,9 +197,27 @@ export function UploadHistory({
     }
     if (s === 'rejected' || s === 'failed') {
       return (
-        <span className="history-badge is-rejected">
+        <span 
+          className={`history-badge is-rejected ${item.rejectionDetails ? 'has-feedback-trigger' : ''}`}
+          onClick={() => item.rejectionDetails && setActiveFeedbackItem(item.rejectionDetails)}
+          style={{ cursor: item.rejectionDetails ? 'pointer' : 'default' }}
+          title={item.rejectionDetails ? "Click to view broker rejection comments" : "Submission rejected by broker"}
+        >
           <AlertTriangleIcon size={12} />
           <span>Rejected</span>
+          {item.rejectionDetails && (
+            <span className="status-note-icon-btn" title="View broker comments">
+              <MessageSquareIcon size={11} />
+            </span>
+          )}
+        </span>
+      )
+    }
+    if (s === 'revoked') {
+      return (
+        <span className="history-badge is-revoked" title="Revoked by HR: This file submission was revoked and cannot be downloaded.">
+          <CloseIcon size={12} />
+          <span>Revoked</span>
         </span>
       )
     }
@@ -147,14 +229,86 @@ export function UploadHistory({
     )
   }
 
+  const getTime = (item) => {
+    const raw = item.uploadedOn || item.createdAt || item.uploaded_on
+    if (!raw) return 0
+    const t = new Date(raw).getTime()
+    return isNaN(t) ? 0 : t
+  }
+
   const filteredItems = historyItems.filter((item) => {
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase().trim()
-    const fileName = (item.fileName || '').toLowerCase()
-    const uploader = (item.uploadedByEmail || item.uploadedBy || '').toLowerCase()
-    const status = (item.status || '').toLowerCase()
-    return fileName.includes(q) || uploader.includes(q) || status.includes(q)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      const fileName = (item.fileName || '').toLowerCase()
+      const uploader = (item.uploadedByEmail || item.uploadedBy || '').toLowerCase()
+      if (!fileName.includes(q) && !uploader.includes(q)) {
+        return false
+      }
+    }
+
+    if (statusFilter !== 'all') {
+      const s = String(item.status || 'pending').toLowerCase()
+      if (statusFilter === 'approved') {
+        if (s !== 'approved' && s !== 'completed') return false
+      } else if (statusFilter === 'failed') {
+        if (s !== 'failed' && s !== 'rejected') return false
+      } else if (statusFilter === 'pending') {
+        if (s !== 'pending' && s !== 'pending_review' && s !== 'processing') return false
+      } else if (statusFilter === 'revoked') {
+        if (s !== 'revoked') return false
+      }
+    }
+
+    if (startDate || endDate) {
+      const rawDate = item.uploadedOn || item.createdAt || item.uploaded_on
+      if (!rawDate) return false
+      const itemTime = new Date(rawDate).getTime()
+      if (isNaN(itemTime)) return false
+
+      if (startDate) {
+        const [sY, sM, sD] = startDate.split('-').map(Number)
+        const startTime = new Date(sY, sM - 1, sD, 0, 0, 0, 0).getTime()
+        if (itemTime < startTime) return false
+      }
+
+      if (endDate) {
+        const [eY, eM, eD] = endDate.split('-').map(Number)
+        const endTime = new Date(eY, eM - 1, eD, 23, 59, 59, 999).getTime()
+        if (itemTime > endTime) return false
+      }
+    }
+
+    return true
   })
+
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    let comp = 0
+    if (sortBy === 'name') {
+      const nameA = String(a.fileName || '').toLowerCase()
+      const nameB = String(b.fileName || '').toLowerCase()
+      comp = nameA.localeCompare(nameB)
+    } else if (sortBy === 'records') {
+      const recA = Number(a.noOfRows ?? a.validRows ?? 0)
+      const recB = Number(b.noOfRows ?? b.validRows ?? 0)
+      comp = recA - recB
+    } else {
+      // Default: 'date'
+      const timeA = getTime(a)
+      const timeB = getTime(b)
+      comp = timeA - timeB
+    }
+
+    return sortOrder === 'asc' ? comp : -comp
+  })
+
+  const toggleDateSort = () => {
+    if (sortBy !== 'date') {
+      setSortBy('date')
+      setSortOrder('desc')
+    } else {
+      setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+    }
+  }
 
   return (
     <div className="upload-history-container">
@@ -192,14 +346,38 @@ export function UploadHistory({
             )}
           </div>
 
+          <StatusFilterDropdown
+            selectedStatus={statusFilter}
+            onStatusChange={(newStatus) => setStatusFilter(newStatus)}
+            isBroker={false}
+          />
+
+          <DateRangeFilterDropdown
+            startDate={startDate}
+            endDate={endDate}
+            onDateRangeChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s)
+              setEndDate(e)
+            }}
+          />
+
+          <SortDropdown
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={({ sortBy: newSortBy, sortOrder: newSortOrder }) => {
+              setSortBy(newSortBy)
+              setSortOrder(newSortOrder)
+            }}
+          />
+
           <button
             type="button"
-            className="history-refresh-btn"
-            onClick={fetchHistory}
-            disabled={isLoading}
+            className={`history-refresh-btn ${isManualRefreshing || isLoading ? 'is-refreshing' : ''}`}
+            onClick={handleManualRefresh}
+            disabled={isLoading || isManualRefreshing}
             title="Refresh history"
           >
-            <RefreshCwIcon size={14} className={isLoading ? 'spin' : ''} />
+            <RefreshCwIcon size={14} className={isManualRefreshing || isLoading ? 'spin' : ''} />
             <span>Refresh</span>
           </button>
         </div>
@@ -258,19 +436,102 @@ export function UploadHistory({
             <thead>
               <tr>
                 <th className="col-file">File Name</th>
-                <th className="col-uploader">Uploaded By / On</th>
+                <th className="col-uploader col-sortable">
+                  <button
+                    type="button"
+                    className="history-th-sort-btn"
+                    onClick={toggleDateSort}
+                    title={sortBy === 'date' && sortOrder === 'desc' ? "Sorted Newest first (Click for Oldest first)" : "Sorted Oldest first (Click for Newest first)"}
+                    aria-sort={sortBy === 'date' ? (sortOrder === 'desc' ? 'descending' : 'ascending') : 'none'}
+                  >
+                    <span>Uploaded By / On</span>
+                    <span className={`sort-icon-indicator ${sortBy === 'date' ? 'is-active ' + sortOrder : 'is-inactive'}`}>
+                      {sortBy === 'date' ? (sortOrder === 'desc' ? <ArrowDownIcon size={12} /> : <ArrowUpIcon size={12} />) : <ArrowUpDownIcon size={11} />}
+                    </span>
+                  </button>
+                </th>
                 <th className="col-records">Records</th>
-                <th className="col-status">Status</th>
+                <th className="col-status">
+                  <div className="status-header-cell">
+                    <span>Status</span>
+                    <div className="status-info-popover-wrapper">
+                      <button 
+                        type="button" 
+                        className="status-info-trigger" 
+                        aria-label="Status Definitions Guide"
+                        title="Click or hover to view status definitions"
+                      >
+                        <InfoIcon size={13} />
+                      </button>
+                      <div className="status-popover-card">
+                        <div className="status-popover-header">Status Lifecycle Guide</div>
+                        
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-pending" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Pending Review</div>
+                            <div className="status-popover-desc">Uploaded by HR; awaiting broker review and validation.</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-locked" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Locked by Broker</div>
+                            <div className="status-popover-desc">A broker is reviewing this file (cannot be deleted while locked).</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-approved" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Approved</div>
+                            <div className="status-popover-desc">All member records validated and saved to database.</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-rejected" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Rejected</div>
+                            <div className="status-popover-desc">Rejected by broker with specific feedback comments (HR can fix & re-upload).</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-failed" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Failed</div>
+                            <div className="status-popover-desc">Error occurred during validation or saving records to database.</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <span className="status-dot dot-revoked" />
+                          <div className="status-popover-text">
+                            <div className="status-popover-label">Revoked</div>
+                            <div className="status-popover-desc">Revoked by HR; file is archived and cannot be downloaded or reviewed.</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </th>
                 <th className="col-actions" style={{ textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((item) => (
+              {sortedItems.map((item) => (
                 <tr key={item.uuid}>
                   <td className="history-file-cell">
                     <div className="history-file-info">
                       <ExcelFileIcon size={22} />
-                      <span className="history-filename" title={item.fileName}>
+                      <span 
+                        className="history-filename is-clickable" 
+                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                        title={`Click to view audit timeline: ${item.fileName}`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#cbd5e1' }}
+                      >
                         {item.fileName}
                       </span>
                     </div>
@@ -293,25 +554,252 @@ export function UploadHistory({
                       {item.noOfRows ?? item.validRows ?? 0}
                     </span>
                   </td>
-                  <td className="history-status-cell">{getStatusBadge(item.status)}</td>
+                  <td className="history-status-cell">{getStatusBadge(item)}</td>
                   <td className="history-action-cell" style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      className="history-download-btn"
-                      onClick={() => handleDownload(item)}
-                      disabled={downloadingUuid === item.uuid}
-                      title="Download original file"
-                    >
-                      <DownloadIcon size={13} />
-                      <span>
-                        {downloadingUuid === item.uuid ? 'Downloading…' : 'Download'}
-                      </span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      
+                      {/* Global Audit Trail Button */}
+                      <button
+                        type="button"
+                        className="history-download-btn action-btn-audit"
+                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                        title="View complete time-travel audit history and transaction cycles"
+                      >
+                        <ClockIcon size={13} />
+                        <span>Audit Trail</span>
+                      </button>
+
+                      {item.status === 'revoked' ? (
+                        <span className="history-revoked-tag" title="This file was revoked by HR and cannot be downloaded.">
+                          Revoked
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="history-download-btn"
+                          onClick={() => handleDownload(item)}
+                          disabled={downloadingUuid === item.uuid}
+                          title={item.status === 'rejected' ? "Download original file to inspect and fix issues" : "Download original file"}
+                        >
+                          <DownloadIcon size={13} />
+                          <span>
+                            {downloadingUuid === item.uuid ? 'Downloading…' : 'Download'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Delete / Revoke Button for HR */}
+                      {role === 'hr' && item.status !== 'approved' && item.status !== 'revoked' && item.status !== 'deleted' && item.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          className="history-delete-btn"
+                          onClick={() => {
+                            setItemToDelete(item)
+                            setDeleteError(null)
+                          }}
+                          disabled={isDeleting && itemToDelete?.uuid === item.uuid}
+                          title="Revoke this submission before broker locks it"
+                        >
+                          <TrashIcon size={13} />
+                          <span>Revoke</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete / Revoke Success Notification Toast */}
+      {deleteSuccessToast && (
+        <div className="history-success-toast">
+          <CheckCircleIcon size={16} />
+          <span>{deleteSuccessToast}</span>
+          <button
+            type="button"
+            className="toast-close-btn"
+            onClick={() => setDeleteSuccessToast(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Rejection Feedback Note Viewer Modal for HR */}
+      {activeFeedbackItem && (
+        <div
+          className="delete-modal-backdrop"
+          onClick={() => setActiveFeedbackItem(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="delete-modal-window feedback-viewer-window"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '500px' }}
+          >
+            <div className="delete-modal-header" style={{ borderBottomColor: '#fecaca' }}>
+              <div className="delete-icon-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+                <AlertTriangleIcon size={20} />
+              </div>
+              <div>
+                <h3 className="delete-modal-title" style={{ color: '#991b1b' }}>Broker Rejection Feedback</h3>
+                <span className="delete-modal-subtitle">
+                  Review the broker's required corrections before re-uploading
+                </span>
+              </div>
+              <button
+                type="button"
+                className="delete-modal-close-btn"
+                onClick={() => setActiveFeedbackItem(null)}
+                title="Close"
+              >
+                <CloseIcon size={16} />
+              </button>
+            </div>
+
+            <div className="delete-modal-body">
+              <div className="feedback-meta-badge-row">
+                <span className="feedback-reason-chip">🏷️ {activeFeedbackItem.reason || 'Rejection Note'}</span>
+                {activeFeedbackItem.rejectedAt && (
+                  <span className="feedback-date-text">{formatDate(activeFeedbackItem.rejectedAt)}</span>
+                )}
+              </div>
+
+              <div className="feedback-quote-card">
+                <div className="feedback-author-line">
+                  <strong>Broker Reviewer:</strong>
+                  <span className="feedback-author-email">{activeFeedbackItem.rejectedByEmail || 'Broker'}</span>
+                </div>
+                <p className="feedback-comment-text">
+                  "{activeFeedbackItem.comment || 'No specific feedback comment provided.'}"
+                </p>
+              </div>
+
+              <div className="delete-notice-box" style={{ marginTop: '14px', background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af' }}>
+                <InfoIcon size={16} />
+                <span>
+                  <strong>Next Steps:</strong> Download your original submitted file, apply the requested fixes, and upload a fresh submission through the <strong>Upload & Validate</strong> tab.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete / Revoke Confirmation & Lock-Check Modal */}
+      {itemToDelete && (
+        <div
+          className="delete-modal-backdrop"
+          onClick={() => {
+            if (!isDeleting) {
+              setItemToDelete(null)
+              setDeleteError(null)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="delete-modal-window"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="delete-modal-header">
+              <div className="delete-icon-badge">
+                <TrashIcon size={20} />
+              </div>
+              <div>
+                <h3 className="delete-modal-title">Revoke File Submission?</h3>
+                <span className="delete-modal-subtitle">
+                  Mark mistakenly uploaded file as revoked
+                </span>
+              </div>
+              <button
+                type="button"
+                className="delete-modal-close-btn"
+                onClick={() => {
+                  if (!isDeleting) {
+                    setItemToDelete(null)
+                    setDeleteError(null)
+                  }
+                }}
+                disabled={isDeleting}
+                title="Cancel (Esc)"
+              >
+                <CloseIcon size={16} />
+              </button>
+            </div>
+
+            <div className="delete-modal-body">
+              {deleteError ? (
+                <div className="delete-error-banner">
+                  <div className="delete-error-icon">
+                    <LockIcon size={18} />
+                  </div>
+                  <div>
+                    <strong>Revocation Blocked</strong>
+                    <p>{deleteError}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="delete-lead-text">
+                    Are you sure you want to revoke this submission? It will be marked as <strong>Revoked</strong> and will no longer be available for broker review or download.
+                  </p>
+
+                  <div className="delete-file-summary-card">
+                    <div className="delete-file-row">
+                      <span className="df-label">File Name:</span>
+                      <strong className="df-val">{itemToDelete.fileName}</strong>
+                    </div>
+                    <div className="delete-file-row">
+                      <span className="df-label">Records:</span>
+                      <span className="df-val">{itemToDelete.noOfRows ?? itemToDelete.validRows ?? 0} members</span>
+                    </div>
+                    <div className="delete-file-row">
+                      <span className="df-label">Uploaded On:</span>
+                      <span className="df-val">{formatDate(itemToDelete.uploadedOn)}</span>
+                    </div>
+                  </div>
+
+                  <div className="delete-notice-box">
+                    <AlertTriangleIcon size={16} />
+                    <span>
+                      <strong>Safety Check:</strong> The system will verify that no broker has claimed or locked this file before marking it as revoked.
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="delete-modal-footer">
+              <button
+                type="button"
+                className="delete-modal-cancel-btn"
+                onClick={() => {
+                  setItemToDelete(null)
+                  setDeleteError(null)
+                }}
+                disabled={isDeleting}
+              >
+                {deleteError ? 'Close' : 'Cancel'}
+              </button>
+
+              {!deleteError && (
+                <button
+                  type="button"
+                  className="delete-modal-confirm-btn"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Checking Lock & Revoking…' : 'Yes, Revoke File'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
