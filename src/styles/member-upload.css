@@ -1509,7 +1509,8 @@ button {
   font-size: 13px;
 }
 
-.worksheet td.cell-error {
+.worksheet td.cell-error,
+.worksheet td.has-error {
   background: #fff1f2 !important;
   border-bottom: 1px solid #fecdd3 !important;
   cursor: help;
@@ -1533,27 +1534,30 @@ button {
   max-width: 220px;
 }
 
-.worksheet td.cell-error .cell-text {
-  color: #be123c;
+.worksheet td.cell-error .cell-text,
+.worksheet td.has-error .cell-text {
+  color: #be123c !important;
   font-weight: 600;
 }
 
 .worksheet .cell-empty {
-  color: #94a3b8;
+  color: #e11d48 !important;
   font-style: italic;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 /* Red top-right corner marker (Excel-style error indicator) */
-.worksheet .cell-error-corner {
+.worksheet .cell-error-corner,
+.worksheet .cell-error-triangle {
   position: absolute;
-  top: -6px;
-  right: -10px;
+  top: 0;
+  right: 0;
   width: 0;
   height: 0;
-  border-top: 7px solid #e11d48;
-  border-left: 7px solid transparent;
+  border-top: 8px solid #e11d48;
+  border-left: 8px solid transparent;
+  z-index: 5;
 }
 
 /* High-Performance Portal Floating Tooltip (Premium Light Theme) */

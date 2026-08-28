@@ -173,10 +173,24 @@ export function ValidationWorksheet({
   const { rows, errorRows, columns, columnLabels } = useMemo(() => {
     const acceptedRows = Array.isArray(result?.acceptedRows) ? result.acceptedRows : []
     const rejectedRows = Array.isArray(result?.rejectedRows) ? result.rejectedRows : []
+    const rejectedSet = new Set(rejectedRows)
+
     const allRows = [...acceptedRows, ...rejectedRows]
       .filter((row) => row && typeof row === 'object')
       .sort((first, second) => (first.sourceRow || first.row || 0) - (second.sourceRow || second.row || 0))
-    const invalidRows = allRows.filter((row) => row.valid === false)
+
+    const isRowError = (row) => {
+      if (!row || typeof row !== 'object') return false
+      if (rejectedSet.has(row)) return true
+      if (row.valid === false || row.valid === 'false' || row.valid === 0 || row.is_valid === false) return true
+      if (row.status === 'REJECTED' || row.status === 'ERROR' || row.status === 'INVALID') return true
+      if (Array.isArray(row.fields)) {
+        return row.fields.some((f) => f && (f.valid === false || f.valid === 'false' || (Array.isArray(f.remarks) && f.remarks.length > 0)))
+      }
+      return false
+    }
+
+    const invalidRows = allRows.filter(isRowError)
     const headers = [...new Set(allRows.flatMap((row) => Object.keys(row.values || {})))]
 
     const labelMap = {}
@@ -334,8 +348,8 @@ export function ValidationWorksheet({
                   displayedRows.map((row, rowIndex) => {
                     const rowNum = row.sourceRow || row.row || rowIndex + 1
                     return (
-                      <tr key={rowNum} className={row.valid === false ? 'row-invalid' : ''}>
-                        <td className="row-number-cell">{rowNum}</td>
+                      <tr key={rowNum} className={row.valid === false ? 'has-row-error row-invalid' : ''}>
+                        <td className="row-number-cell row-number">{rowNum}</td>
                         {columns.map((column) => {
                           const issues = getFieldIssues(row, column)
                           const hasIssue = issues.length > 0
@@ -345,7 +359,7 @@ export function ValidationWorksheet({
                           return (
                             <td
                               key={`${rowNum}-${column}`}
-                              className={`worksheet-cell ${hasIssue ? 'has-error' : ''} ${hasIssue ? 'has-tooltip-trigger' : ''}`}
+                              className={`worksheet-cell ${hasIssue ? 'cell-error has-error has-tooltip-trigger' : ''}`}
                               onMouseEnter={(event) => {
                                 if (hasIssue) {
                                   const rect = event.currentTarget.getBoundingClientRect()
@@ -362,14 +376,12 @@ export function ValidationWorksheet({
                                 }
                               }}
                             >
-                              {isValueEmpty ? (
-                                <span className={hasIssue ? 'cell-empty-text' : 'cell-dash'}>
-                                  {hasIssue ? '(empty)' : '—'}
+                              <div className="cell-content">
+                                <span className={`cell-text ${isValueEmpty && hasIssue ? 'cell-empty' : ''}`}>
+                                  {isValueEmpty ? (hasIssue ? '(empty)' : '—') : String(cellValue)}
                                 </span>
-                              ) : (
-                                String(cellValue)
-                              )}
-                              {hasIssue && <span className="cell-error-triangle" />}
+                                {hasIssue && <span className="cell-error-corner cell-error-triangle" />}
+                              </div>
                             </td>
                           )
                         })}
