@@ -10,9 +10,17 @@ import {
   SearchIcon,
   CloseIcon,
   ExcelFileIcon,
+  ChevronLeftIcon,
+  CopyIcon,
+  CheckIcon,
   LockIcon,
   UnlockIcon,
   TrashIcon,
+  UserIcon,
+  InfoIcon,
+  ZapIcon,
+  MessageSquareIcon,
+  TableIcon,
 } from './Icons.jsx'
 import { parseExcelWorkbook } from '../utils/excelParser.js'
 
@@ -56,7 +64,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
         // Fetch actual Excel file from S3 via download endpoint to reconstruct full worksheet
         const filePromise = fetch(
-          `${apiConfig.apiBaseUrl}/uploads3/download/${fileUuid}?role=${encodeURIComponent(role || 'hr')}`,
+          `${apiConfig.apiBaseUrl}/uploads3/download/${fileUuid}?role=${encodeURIComponent(role || 'hr')}&internal=true`,
           {
             headers: {
               'x-api-key': apiConfig.apiKey,
@@ -81,12 +89,11 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
           }
         }
 
-        // Expand all cycles by default
+        // Only keep the last cycle expanded by default, others collapsed
         const initExpanded = {}
-        if (data.cycles) {
-          data.cycles.forEach((c) => {
-            initExpanded[c.cycle_id] = true
-          })
+        if (data.cycles && data.cycles.length > 0) {
+          const lastCycle = data.cycles[data.cycles.length - 1]
+          initExpanded[lastCycle.cycle_id] = true
         }
         setExpandedCycles(initExpanded)
 
@@ -127,7 +134,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
   // Active selected transaction
   const activeTx = useMemo(() => {
     if (!selectedTxId) return allSubTransactions[allSubTransactions.length - 1] || null
-    return allSubTransactions.find((t) => t.id === selectedTxId) || allSubTransactions[0] || null
+    return allSubTransactions.find((t) => String(t.id) === String(selectedTxId)) || allSubTransactions[0] || null
   }, [selectedTxId, allSubTransactions])
 
   // Compute effective interactive worksheet snapshot for selected sub-transaction
@@ -281,7 +288,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
       {/* Toast Notification */}
       {copyToast && (
         <div className="copy-toast">
-          <div className="copy-toast-badge">✓</div>
+          <div className="copy-toast-badge"><CheckIcon size={12} /></div>
           <div className="copy-toast-content">Copied <strong>{copyToast}</strong> to clipboard</div>
         </div>
       )}
@@ -290,36 +297,52 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
       <header className="audit-header-bar">
         <div className="audit-header-left">
           <button type="button" className="audit-back-btn" onClick={onBack} title="Return to Dashboard">
-            ← Back to Dashboard
+            <ChevronLeftIcon size={14} />
+            <span>Back to Dashboard</span>
           </button>
           <div className="audit-file-headline">
+            <div className="audit-file-icon-wrap">
+              <ExcelFileIcon size={20} />
+            </div>
             <h1 className="audit-file-name" title={fileInfo.file_name}>
               {fileInfo.file_name || 'File Timeline'}
             </h1>
-            <span
-              className="audit-uuid-pill"
+            <button
+              type="button"
+              className={`audit-uuid-pill ${copyToast ? 'is-copied' : ''}`}
               onClick={() => copyToClipboard(fileInfo.uuid, 'File UUID')}
-              title="Click to copy full UUID"
+              title="Click to copy full UUID to clipboard"
             >
-              UUID: {fileInfo.uuid ? fileInfo.uuid.substring(0, 13) + '…' : ''} 📋
-            </span>
+              {copyToast ? (
+                <>
+                  <CheckIcon size={12} className="copy-check-icon" />
+                  <span className="copy-success-text">Copied UUID!</span>
+                </>
+              ) : (
+                <>
+                  <span>UUID: {fileInfo.uuid ? fileInfo.uuid.substring(0, 13) + '…' : ''}</span>
+                  <CopyIcon size={12} />
+                </>
+              )}
+            </button>
             <span className={`audit-status-badge is-${(fileInfo.status || 'pending').toLowerCase()}`}>
-              {fileInfo.status ? fileInfo.status.toUpperCase() : 'PENDING'}
+              <span className="status-pulsing-dot" />
+              <span>{fileInfo.status ? fileInfo.status.toUpperCase() : 'PENDING'}</span>
             </span>
           </div>
         </div>
 
         <div className="audit-header-meta">
           <div className="audit-meta-stat">
-            <span className="meta-stat-label">Corporate</span>
-            <span className="meta-stat-val">ID: {fileInfo.corp_id || 'N/A'}</span>
+            <span className="meta-stat-label">Corporate ID</span>
+            <span className="meta-stat-val">{fileInfo.corp_id || 'N/A'}</span>
           </div>
           <div className="audit-meta-stat">
             <span className="meta-stat-label">Cycles</span>
             <span className="meta-stat-val">{summary.total_cycles || 0}</span>
           </div>
           <div className="audit-meta-stat">
-            <span className="meta-stat-label">Sub-Transactions</span>
+            <span className="meta-stat-label">Milestones</span>
             <span className="meta-stat-val">{summary.total_sub_transactions || 0}</span>
           </div>
         </div>
@@ -327,55 +350,8 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
       {/* ── Main Split Console View ──────────────────────────────────────── */}
       <div className="audit-console-body">
-        {/* ── Left Sidebar: Chronological Cycle Stepper & Search ─────────── */}
+        {/* ── Left Sidebar: Chronological Cycle Stepper ─────────── */}
         <aside className="audit-timeline-col no-print">
-          {/* Search Member / Keyword */}
-          <div className="timeline-search-box">
-            <SearchIcon size={14} />
-            <input
-              type="text"
-              placeholder="Search Member, Staff ID, or Error…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="timeline-search-input"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                className="search-clear-btn"
-                onClick={() => setSearchTerm('')}
-                title="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="timeline-filter-pills">
-            <button
-              type="button"
-              className={`timeline-pill ${filterMode === 'all' ? 'is-active' : ''}`}
-              onClick={() => setFilterMode('all')}
-            >
-              All ({auditData?.cycles?.length || 0})
-            </button>
-            <button
-              type="button"
-              className={`timeline-pill ${filterMode === 'committed' ? 'is-active' : ''}`}
-              onClick={() => setFilterMode('committed')}
-            >
-              Committed ({summary.committed_count || 0})
-            </button>
-            <button
-              type="button"
-              className={`timeline-pill is-abandoned ${filterMode === 'cancelled' ? 'is-active' : ''}`}
-              onClick={() => setFilterMode('cancelled')}
-            >
-              Cancelled ({summary.abandoned_count || 0})
-            </button>
-          </div>
-
           {/* Cycles Accordion List */}
           <div className="timeline-cycles-list">
             {filteredCycles.length === 0 ? (
@@ -397,23 +373,35 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     {/* Cycle Card Header */}
                     <div className="cycle-card-header" onClick={() => toggleCycle(cycle.cycle_id)}>
                       <div className="cycle-header-top">
-                        <span className="cycle-seq-badge">Cycle {cycle.cycle_seq || cIdx + 1}</span>
-                        <span className={`cycle-status-pill is-${(cycle.cycle_status || 'committed').toLowerCase()}`}>
-                          {isAbandoned ? '⚠️ Cancelled / Aborted' : isRejected ? '❌ Rejected' : isForce ? '⚡ Force Approved' : '✅ Committed'}
-                        </span>
+                        <div className="cycle-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="cycle-title-count" style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                            Cycle {cycle.cycle_seq || cIdx + 1}
+                          </span>
+                          <span className={`cycle-status-pill is-${(cycle.cycle_status || 'committed').toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            {isAbandoned ? (
+                              <><AlertTriangleIcon size={10} /><span>Cancelled</span></>
+                            ) : isRejected ? (
+                              <><CloseIcon size={10} /><span>Rejected</span></>
+                            ) : isForce ? (
+                              <><ZapIcon size={10} /><span>Force Approved</span></>
+                            ) : (
+                              <><CheckCircleIcon size={10} /><span>Committed</span></>
+                            )}
+                          </span>
+                        </div>
                         <span className="cycle-toggle-icon">
                           {isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
                         </span>
                       </div>
 
-                      <h4 className="cycle-title">{cycle.cycle_label || 'File Session'}</h4>
-
-                      <div className="cycle-meta-row">
-                        <span className="cycle-actor-text">
-                          👤 {cycle.actor?.email || cycle.actor?.user_id || 'System'}
+                      <div className="cycle-meta-row" style={{ marginTop: '6px' }}>
+                        <span className="cycle-actor-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <UserIcon size={11} />
+                          <span>{cycle.actor?.email || cycle.actor?.user_id || 'System'}</span>
                         </span>
-                        <span className="cycle-date-text">
-                          🕒 {new Date(cycle.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <span className="cycle-date-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <ClockIcon size={11} />
+                          <span>{new Date(cycle.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </span>
                       </div>
                     </div>
@@ -422,7 +410,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     {isExpanded && (
                       <div className="cycle-substeps-list">
                         {cycle.sub_transactions.map((sub, sIdx) => {
-                          const isSelected = activeTx?.id === sub.id
+                          const isSelected = String(activeTx?.id) === String(sub.id)
                           const isSubCancelled = sub.is_cancelled
                           const hasErrors = sub.bypassed_errors_count > 0 || (sub.worksheet_snapshot?.rejectedRows > 0)
 
@@ -432,7 +420,10 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                               className={`substep-item ${isSelected ? 'is-active' : ''} ${isSubCancelled ? 'is-cancelled' : ''}`}
                               onClick={() => setSelectedTxId(sub.id)}
                             >
-                              <div className="substep-track-dot" />
+                              <div className="substep-indicator-col">
+                                <div className="substep-track-dot" />
+                                {sIdx < cycle.sub_transactions.length - 1 && <div className="substep-timeline-connector" />}
+                              </div>
                               <div className="substep-content">
                                 <div className="substep-top">
                                   <span className="substep-seq">Step {sub.sub_seq || `${cIdx + 1}.${sIdx + 1}`}</span>
@@ -442,8 +433,9 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                                 </div>
                                 <div className="substep-title">{sub.action_title || sub.action_code}</div>
                                 {hasErrors && (
-                                  <div className="substep-error-hint">
-                                    ⚠️ {sub.bypassed_errors_count || sub.worksheet_snapshot?.rejectedRows} error(s) flagged
+                                  <div className="substep-error-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <AlertTriangleIcon size={11} />
+                                    <span>{sub.bypassed_errors_count || sub.worksheet_snapshot?.rejectedRows} error(s) flagged</span>
                                   </div>
                                 )}
                                 {isSubCancelled && (
@@ -471,24 +463,31 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
               {/* Event Context Header */}
               <div className="inspector-event-header">
                 <div className="event-title-group">
-                  <div className="event-step-pill">
-                    Step {activeTx.sub_seq} • Cycle {activeTx.parentCycle?.cycle_seq}
+                  <div className="event-breadcrumb-strip">
+                    <span className="breadcrumb-tag">Cycle {activeTx.cycle_seq || activeTx.parentCycle?.cycle_seq || 1}</span>
+                    <span className="breadcrumb-dot">•</span>
+                    <span className="breadcrumb-tag is-step">Step {activeTx.sub_seq || '1.1'}</span>
                   </div>
-                  <h2 className="event-main-title">{activeTx.action_title}</h2>
-                  <div className="event-action-code">
-                    <code>action_code: {activeTx.action_code}</code>
+                  <h2 className="event-main-title">{activeTx.action_title || activeTx.action_code}</h2>
+                  <div className="event-action-code-row">
+                    <span className="event-code-badge">action_code: {activeTx.action_code}</span>
                   </div>
                 </div>
 
                 <div className="event-actor-card">
-                  <div className="actor-avatar">
-                    {activeTx.actor?.role === 'broker' ? '🛡️' : '🏢'}
+                  <div className="actor-avatar-badge">
+                    {activeTx.actor?.role === 'broker' ? 'BR' : 'HR'}
                   </div>
                   <div className="actor-info">
-                    <span className="actor-name">{activeTx.actor?.email || 'Unknown User'}</span>
-                    <span className="actor-role">Role: {activeTx.actor?.role ? activeTx.actor.role.toUpperCase() : 'USER'} • ID: {activeTx.actor?.user_id}</span>
-                    <span className="actor-time">
-                      Logged: {new Date(activeTx.timestamp).toLocaleString()}
+                    <div className="actor-name-row">
+                      <span className="actor-name">{activeTx.actor?.email || activeTx.actor?.user_id || 'System User'}</span>
+                      <span className={`actor-role-pill is-${(activeTx.actor?.role || 'user').toLowerCase()}`}>
+                        {(activeTx.actor?.role || 'USER').toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="actor-time" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <ClockIcon size={11} />
+                      <span>{new Date(activeTx.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
                     </span>
                   </div>
                 </div>
@@ -497,7 +496,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
               {/* Special Context Banners */}
               {activeTx.rejection_comments && (
                 <div className="audit-callout-box is-rejection">
-                  <div className="callout-icon">💬</div>
+                  <div className="callout-icon"><MessageSquareIcon size={16} /></div>
                   <div className="callout-body">
                     <strong>Broker Rejection Feedback Note:</strong>
                     <p className="rejection-quote">"{activeTx.rejection_comments}"</p>
@@ -510,7 +509,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
               {activeTx.is_cancelled && (
                 <div className="audit-callout-box is-cancelled">
-                  <div className="callout-icon">⚠️</div>
+                  <div className="callout-icon"><AlertTriangleIcon size={16} /></div>
                   <div className="callout-body">
                     <strong>Session Cancelled / Discarded:</strong>
                     <p>The user initiated this session but chose to cancel without committing changes to the database. All exploratory validation states are captured here for audit forensics.</p>
@@ -520,7 +519,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
               {activeTx.action_code === 'FORCE_APPROVED_WITH_ERRORS' && (
                 <div className="audit-callout-box is-force">
-                  <div className="callout-icon">⚡</div>
+                  <div className="callout-icon"><ZapIcon size={16} /></div>
                   <div className="callout-body">
                     <strong>Force Ingestion Executed:</strong>
                     <p>Broker bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
@@ -543,7 +542,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                   color: '#475569',
                   lineHeight: '1.4'
                 }}>
-                  <span style={{ fontSize: '18px' }}>ℹ️</span>
+                  <InfoIcon size={18} style={{ color: '#0284c7', flexShrink: 0 }} />
                   <div>
                     <strong>Legacy Milestone Summary:</strong> This transaction recorded <strong>{displayFaultyRows} bypassed error(s)</strong> prior to granular row snapshot persistence. The original file data is rendered below.
                   </div>
@@ -554,13 +553,16 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
               <div className="inspector-worksheet-toolbar">
                 <div className="toolbar-stats-strip">
                   <span className="sheet-stat-chip">
-                    📊 Total Rows: {displayTotalRows}
+                    <TableIcon size={12} />
+                    <span>Total Rows: {displayTotalRows}</span>
                   </span>
                   <span className="sheet-stat-chip is-clean">
-                    ✓ Clean Rows: {displayCleanRows}
+                    <CheckCircleIcon size={12} style={{ color: '#059669' }} />
+                    <span>Clean Rows: {displayCleanRows}</span>
                   </span>
                   <span className={`sheet-stat-chip ${displayFaultyRows > 0 ? 'is-faulty' : ''}`}>
-                    ⚠️ Faulty Rows: {displayFaultyRows}
+                    <AlertTriangleIcon size={12} style={{ color: displayFaultyRows > 0 ? '#dc2626' : 'currentColor' }} />
+                    <span>Faulty Rows: {displayFaultyRows}</span>
                   </span>
                 </div>
 
@@ -578,6 +580,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
               {/* Historical Worksheet Snapshot Preview */}
               <div className="inspector-sheet-wrapper">
+
                 {effectiveSnapshot && Array.isArray(effectiveSnapshot.rows) && effectiveSnapshot.rows.length > 0 ? (
                   <HistoricalWorksheetTable
                     rows={effectiveSnapshot.rows}
@@ -615,23 +618,35 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 }
 
 /**
- * ── Helper Table for Historical Worksheet Snapshot ───────────────────────
+ * ── Helper Table for Historical Worksheet Snapshot & Visual Diff ────────
  */
-function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, baseHeaders, baseRows }) {
+function HistoricalWorksheetTable({
+  rows,
+  errorsOnly,
+  isLegacy,
+  bypassedCount,
+  baseHeaders,
+  baseRows,
+}) {
   // Derive column headers unconditionally:
-  // 1. If baseHeaders exists from the raw Excel workbook in S3, use all of them in exact template order
-  // 2. Otherwise derive from row values
+  // 1. Derive from the authentic snapshot rows (so 61-col snapshots show all 61 columns, and 28-col shows 28)
+  // 2. Fallback to baseHeaders from raw Excel if rows have no keys
   const colKeys = useMemo(() => {
-    if (Array.isArray(baseHeaders) && baseHeaders.length > 0) {
-      return baseHeaders.map((h) => (typeof h === 'string' ? h : h.name)).filter(Boolean)
-    }
     const keys = new Set()
     ;(rows || []).forEach((r) => {
       if (r.values && typeof r.values === 'object') {
         Object.keys(r.values).forEach((k) => keys.add(k))
       }
     })
-    return Array.from(keys)
+    if (keys.size > 0) {
+      return Array.from(keys)
+    }
+
+    if (Array.isArray(baseHeaders) && baseHeaders.length > 0) {
+      return baseHeaders.map((h) => (typeof h === 'string' ? h : h.name)).filter(Boolean)
+    }
+
+    return []
   }, [rows, baseHeaders])
 
   // Filter display rows unconditionally
@@ -720,7 +735,7 @@ function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, b
               marginBottom: '10px',
             }}
           >
-            {isLegacy ? 'ℹ' : '✓'}
+            {isLegacy ? <InfoIcon size={22} /> : <CheckIcon size={22} />}
           </div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
             {isLegacy ? 'Summary-Level Error Record' : 'Zero Faulty Rows in This Snapshot'}
@@ -736,8 +751,9 @@ function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, b
   }
 
   return (
-    <div className="historical-table-scroller">
-      <table className="historical-data-table">
+    <div className="historical-table-scroller-wrap">
+      <div className="historical-table-scroller">
+        <table className="historical-data-table">
         <thead>
           <tr>
             <th style={{ width: '60px' }}>Row #</th>
@@ -753,22 +769,30 @@ function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, b
               const hasErrors = !r.valid || (Array.isArray(r.errors) && r.errors.length > 0)
 
               return (
-                <tr key={r.row || rIdx} className={hasErrors ? 'is-row-error' : 'is-row-valid'}>
-                  <td className="cell-row-num">{r.sourceRow || rIdx + 1}</td>
+                <tr key={r.sourceRow ?? r.row ?? rIdx} className={hasErrors ? 'is-row-error' : 'is-row-valid'}>
+                  <td className="cell-row-num" style={{ fontWeight: 600, color: '#64748b' }}>{r.sourceRow || r.row || rIdx + 1}</td>
                   <td className="cell-status">
-                    <span className={`status-pill ${hasErrors ? 'is-error' : 'is-valid'}`}>
+                    <span className={`status-pill ${hasErrors ? 'is-error' : 'is-valid'}`} style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      background: !hasErrors ? '#d1fae5' : '#fee2e2',
+                      color: !hasErrors ? '#065f46' : '#991b1b',
+                    }}>
                       {hasErrors ? 'FAULTY' : 'VALID'}
                     </span>
                   </td>
                   {colKeys.map((col) => {
-                    const val = getCellValue(r, rIdx, col)
                     const fieldError = getFieldError(r, col)
+                    const val = getCellValue(r, rIdx, col)
 
                     return (
                       <td
                         key={col}
                         className={fieldError ? 'cell-has-error' : ''}
-                        title={fieldError ? fieldError.message : undefined}
+                        title={fieldError ? (fieldError.message || (fieldError.remarks || []).join('; ')) : undefined}
                       >
                         <span>{val}</span>
                       </td>
@@ -779,12 +803,13 @@ function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, b
                       <ul className="row-error-list">
                         {r.errors.map((err, eIdx) => (
                           <li key={eIdx}>
-                            <strong>{err.field}:</strong> {err.message}
+                            <strong>{err.field ? `${err.field}: ` : ''}</strong>
+                            {err.message || (err.remarks || []).join('; ')}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <span className="no-error-dash">—</span>
+                      <span className="no-error-dash" style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>
                     )}
                   </td>
                 </tr>
@@ -794,5 +819,14 @@ function HistoricalWorksheetTable({ rows, errorsOnly, isLegacy, bypassedCount, b
         </tbody>
       </table>
     </div>
+    <div className="sheet-footer-statusbar">
+      <div className="statusbar-left">
+        <span className="statusbar-dot" />
+        <span>Showing <strong>{displayRows.length}</strong> record{displayRows.length === 1 ? '' : 's'}</span>
+        <span className="statusbar-sep">•</span>
+        <span><strong>{colKeys.length}</strong> columns</span>
+      </div>
+    </div>
+  </div>
   )
 }

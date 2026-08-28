@@ -7,9 +7,6 @@ import {
   AlertTriangleIcon,
   ClockIcon,
   SearchIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ArrowUpDownIcon,
   TrashIcon,
   LockIcon,
   CloseIcon,
@@ -301,15 +298,6 @@ export function UploadHistory({
     return sortOrder === 'asc' ? comp : -comp
   })
 
-  const toggleDateSort = () => {
-    if (sortBy !== 'date') {
-      setSortBy('date')
-      setSortOrder('desc')
-    } else {
-      setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
-    }
-  }
-
   return (
     <div className="upload-history-container">
       {/* Header with controls */}
@@ -436,20 +424,7 @@ export function UploadHistory({
             <thead>
               <tr>
                 <th className="col-file">File Name</th>
-                <th className="col-uploader col-sortable">
-                  <button
-                    type="button"
-                    className="history-th-sort-btn"
-                    onClick={toggleDateSort}
-                    title={sortBy === 'date' && sortOrder === 'desc' ? "Sorted Newest first (Click for Oldest first)" : "Sorted Oldest first (Click for Newest first)"}
-                    aria-sort={sortBy === 'date' ? (sortOrder === 'desc' ? 'descending' : 'ascending') : 'none'}
-                  >
-                    <span>Uploaded By / On</span>
-                    <span className={`sort-icon-indicator ${sortBy === 'date' ? 'is-active ' + sortOrder : 'is-inactive'}`}>
-                      {sortBy === 'date' ? (sortOrder === 'desc' ? <ArrowDownIcon size={12} /> : <ArrowUpIcon size={12} />) : <ArrowUpDownIcon size={11} />}
-                    </span>
-                  </button>
-                </th>
+                <th className="col-uploader">Uploaded By / On</th>
                 <th className="col-records">Records</th>
                 <th className="col-status">
                   <div className="status-header-cell">
@@ -557,18 +532,6 @@ export function UploadHistory({
                   <td className="history-status-cell">{getStatusBadge(item)}</td>
                   <td className="history-action-cell" style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                      
-                      {/* Global Audit Trail Button */}
-                      <button
-                        type="button"
-                        className="history-download-btn action-btn-audit"
-                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                        title="View complete time-travel audit history and transaction cycles"
-                      >
-                        <ClockIcon size={13} />
-                        <span>Audit Trail</span>
-                      </button>
-
                       {item.status === 'revoked' ? (
                         <span className="history-revoked-tag" title="This file was revoked by HR and cannot be downloaded.">
                           Revoked
@@ -604,6 +567,17 @@ export function UploadHistory({
                           <span>Revoke</span>
                         </button>
                       )}
+
+                      {/* Compact Audit Trail Icon Button at Far Right */}
+                      <button
+                        type="button"
+                        className="action-btn-audit-icon"
+                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                        title="View Audit Trail"
+                        aria-label="View Audit Trail"
+                      >
+                        <ClockIcon size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>

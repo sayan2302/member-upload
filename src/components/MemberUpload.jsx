@@ -1,4 +1,5 @@
 import { Component, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { getApiConfig } from './apiConfig.js'
 import { CorporatePolicySelector } from './CorporatePolicySelector.jsx'
 import { UploadHistory } from './UploadHistory.jsx'
@@ -36,6 +37,7 @@ const asErrorText = (remark) => {
   text = text.replace(/,\s*null\s*\]/gi, ']')
   text = text.replace(/,\s*""\s*\]/gi, ']')
   text = text.replace(/\[\s*,\s*/g, '[')
+  text = text.replace(/^[•\-\*\s]+/, '')
   return text.trim()
 }
 
@@ -107,6 +109,46 @@ export function ValidationWorksheet({
   const totalCount = validationSummary?.totalRows ?? result?.summary?.totalRows ?? 0
   const acceptedCount = validationSummary?.acceptedRows ?? result?.summary?.acceptedRows ?? 0
   const errorCount = validationSummary?.rejectedCount ?? result?.summary?.rejectedRows ?? 0
+
+  const [activeTooltip, setActiveTooltip] = useState(null)
+
+  // Auto-dismiss floating tooltip when scrolling or resizing
+  useEffect(() => {
+    if (!activeTooltip) return
+    const handleScrollOrResize = () => {
+      setActiveTooltip(null)
+    }
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
+    }
+  }, [activeTooltip])
+
+  const calculateTooltipPosition = (rect) => {
+    if (!rect) return { top: 0, left: 0, openUpward: false, arrowOffset: 0 }
+
+    const tooltipEstimatedWidth = 280
+    const tooltipEstimatedHeight = 110
+
+    const spaceBelow = window.innerHeight - rect.bottom
+    const openUpward = spaceBelow < (tooltipEstimatedHeight + 20) && rect.top > (tooltipEstimatedHeight + 20)
+
+    const cellCenter = rect.left + rect.width / 2
+    const halfWidth = tooltipEstimatedWidth / 2
+    const minLeft = halfWidth + 12
+    const maxLeft = window.innerWidth - halfWidth - 12
+    const clampedLeft = Math.max(minLeft, Math.min(maxLeft, cellCenter))
+    const arrowOffset = Math.max(-halfWidth + 20, Math.min(halfWidth - 20, cellCenter - clampedLeft))
+
+    return {
+      top: openUpward ? rect.top - 8 : rect.bottom + 8,
+      left: clampedLeft,
+      openUpward,
+      arrowOffset,
+    }
+  }
 
   useEffect(() => {
     if (isFullscreen) {
@@ -305,8 +347,32 @@ export function ValidationWorksheet({
                         <td
                           key={column}
                           className={hasError ? 'cell-error' : ''}
-                          title={tooltip}
+                          aria-label={tooltip}
                           tabIndex={hasError ? 0 : undefined}
+                          onMouseEnter={(e) => {
+                            if (!hasError) return
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setActiveTooltip({
+                              colName,
+                              issues,
+                              rect,
+                            })
+                          }}
+                          onMouseLeave={() => {
+                            setActiveTooltip(null)
+                          }}
+                          onFocus={(e) => {
+                            if (!hasError) return
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setActiveTooltip({
+                              colName,
+                              issues,
+                              rect,
+                            })
+                          }}
+                          onBlur={() => {
+                            setActiveTooltip(null)
+                          }}
                         >
                           <div className="cell-content">
                             <span className="cell-text">
@@ -316,24 +382,6 @@ export function ValidationWorksheet({
                               <span className="cell-error-corner" />
                             )}
                           </div>
-                          {hasError && (
-                            <div className="cell-error-tooltip">
-                              <div className="cell-tooltip-header">
-                                <span className="tooltip-field-name">{colName}</span>
-                                {issues.length > 1 && (
-                                  <span className="tooltip-count-badge">{issues.length} errors</span>
-                                )}
-                              </div>
-                              <ul className="cell-tooltip-list">
-                                {issues.map((msg, idx) => (
-                                  <li key={idx} className="cell-tooltip-item">
-                                    <span className="tooltip-bullet">•</span>
-                                    <span>{msg}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
                         </td>
                       )
                     })}
@@ -360,6 +408,56 @@ export function ValidationWorksheet({
           )}
         </div>
       </div>
+
+      {/* High-Performance Portal Floating Tooltip (Never Clipped by Overflow) */}
+      {activeTooltip && typeof document !== 'undefined' && createPortal(
+        (() => {
+          const pos = calculateTooltipPosition(activeTooltip.rect)
+          return (
+            <div
+              className={`worksheet-floating-tooltip ${pos.openUpward ? 'is-arrow-bottom' : 'is-arrow-top'}`}
+              style={{
+                position: 'fixed',
+                top: `${pos.top}px`,
+                left: `${pos.left}px`,
+                transform: pos.openUpward ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                zIndex: 9999999,
+                pointerEvents: 'none',
+              }}
+            >
+              <div 
+                className="floating-tooltip-arrow" 
+                style={{ 
+                  left: `calc(50% + ${pos.arrowOffset}px)` 
+                }} 
+              />
+              <div className="cell-tooltip-header">
+                <div className="tooltip-header-left">
+                  <AlertTriangleIcon size={14} style={{ color: '#e11d48', flexShrink: 0 }} />
+                  <span className="tooltip-field-name">{activeTooltip.colName}</span>
+                </div>
+                <span className="tooltip-count-badge">
+                  {activeTooltip.issues.length > 1
+                    ? `${activeTooltip.issues.length} errors`
+                    : '1 error'}
+                </span>
+              </div>
+              <ul className="cell-tooltip-list">
+                {activeTooltip.issues.map((msg, idx) => {
+                  const cleanMsg = String(msg || '').replace(/^[•\-\*\s]+/, '').trim()
+                  return (
+                    <li key={idx} className="cell-tooltip-item">
+                      <span className="tooltip-bullet" />
+                      <span className="tooltip-text">{cleanMsg}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })(),
+        document.body
+      )}
     </section>
   )
 }
@@ -561,6 +659,7 @@ export default function MemberUpload({
     }
 
     setFile(selectedFile)
+    setCurrentFileUuid(null)
     setValidationPassed(false)
     setValidationSummary(null)
     setValidationResult(null)
@@ -612,6 +711,7 @@ export default function MemberUpload({
 
   const clearFile = () => {
     setFile(null)
+    setCurrentFileUuid(null)
     setValidationPassed(false)
     setValidationSummary(null)
     setValidationResult(null)
@@ -720,6 +820,13 @@ export default function MemberUpload({
 
       const isClean = rejectedCount === 0 && acceptedCount > 0
       setValidationPassed(isClean)
+
+      // If no errors are found on validation then by default show the correct rows, and toggle the error rows switch off
+      if (rejectedCount === 0) {
+        setErrorsOnly(false)
+      } else {
+        setErrorsOnly(true)
+      }
 
       if (isClean) {
         setMessage('All records passed validation. You can now submit this file.')
@@ -924,6 +1031,7 @@ export default function MemberUpload({
 
       // Revert view to clean default stage
       setFile(null)
+      setCurrentFileUuid(null)
       setValidationSummary(null)
       setValidationResult(null)
       setValidationPassed(false)

@@ -132,6 +132,13 @@ export function BrokerUploadModal({
       const isClean = rejectedCount === 0 && acceptedCount > 0
       setValidationPassed(isClean)
 
+      // If no errors are found on validation then by default show the correct rows, and toggle the error rows switch off
+      if (rejectedCount === 0) {
+        setErrorsOnly(false)
+      } else {
+        setErrorsOnly(true)
+      }
+
       if (isClean) {
         setMessage('All records validated successfully. You can now submit this revised file.')
         setMessageType('success')
@@ -353,6 +360,30 @@ export function BrokerUploadModal({
   const handleModalClose = () => {
     if (validationResult && !isSubmitting) {
       try {
+        const acceptedRows = Array.isArray(validationResult.acceptedRows) ? validationResult.acceptedRows : []
+        const rejectedRows = Array.isArray(validationResult.rejectedRows) ? validationResult.rejectedRows : []
+        const allRows = [
+          ...acceptedRows.map((r) => ({
+            row: r.row,
+            sourceRow: r.sourceRow,
+            valid: true,
+            values: r.values,
+            errors: [],
+          })),
+          ...rejectedRows.map((r) => ({
+            row: r.row,
+            sourceRow: r.sourceRow,
+            valid: false,
+            values: r.values,
+            errors: (r.fields || [])
+              .filter((f) => !f.valid)
+              .map((f) => ({
+                field: f.fieldName || f.colMapping,
+                message: (f.remarks || []).join('; '),
+              })),
+          })),
+        ].sort((a, b) => (a.sourceRow || a.row) - (b.sourceRow || b.row))
+
         fetch(`${apiConfig.apiBaseUrl}/uploads3/audit/log-subtransaction`, {
           method: 'POST',
           headers: {
@@ -368,12 +399,13 @@ export function BrokerUploadModal({
             is_cancelled: true,
             cancellation_reason: 'User closed revision modal after validation preview',
             worksheet_snapshot: {
-              totalRows: validationSummary?.totalRows || 0,
+              totalRows: validationSummary?.totalRows || allRows.length,
               acceptedRows: validationSummary?.acceptedRows || 0,
               rejectedRows: validationSummary?.rejectedCount || 0,
-              rows: validationResult?.rows || []
-            }
-          })
+              headers: (acceptedRows[0]?.values || rejectedRows[0]?.values) ? Object.keys(acceptedRows[0]?.values || rejectedRows[0]?.values) : [],
+              rows: allRows,
+            },
+          }),
         }).catch(() => {})
       } catch (_) {}
     }

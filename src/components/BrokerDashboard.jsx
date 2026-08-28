@@ -13,9 +13,6 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   SearchIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ArrowUpDownIcon,
   CloseIcon,
   MessageSquareIcon
 } from './Icons.jsx'
@@ -455,15 +452,6 @@ export function BrokerDashboard({
     return sortOrder === 'asc' ? comp : -comp
   })
 
-  const toggleDateSort = () => {
-    if (sortBy !== 'date') {
-      setSortBy('date')
-      setSortOrder('desc')
-    } else {
-      setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'))
-    }
-  }
-
   return (
     <div className={`upload-history-container ${isCollapsed ? 'is-collapsed-container' : ''}`}>
       <div 
@@ -581,20 +569,7 @@ export function BrokerDashboard({
                 <thead>
                   <tr>
                     <th className="col-file">File Name</th>
-                    <th className="col-uploader col-sortable">
-                      <button
-                        type="button"
-                        className="history-th-sort-btn"
-                        onClick={toggleDateSort}
-                        title={sortBy === 'date' && sortOrder === 'desc' ? "Sorted Newest first (Click for Oldest first)" : "Sorted Oldest first (Click for Newest first)"}
-                        aria-sort={sortBy === 'date' ? (sortOrder === 'desc' ? 'descending' : 'ascending') : 'none'}
-                      >
-                        <span>Uploaded By / On</span>
-                        <span className={`sort-icon-indicator ${sortBy === 'date' ? 'is-active ' + sortOrder : 'is-inactive'}`}>
-                          {sortBy === 'date' ? (sortOrder === 'desc' ? <ArrowDownIcon size={12} /> : <ArrowUpIcon size={12} />) : <ArrowUpDownIcon size={11} />}
-                        </span>
-                      </button>
-                    </th>
+                    <th className="col-uploader">Uploaded By / On</th>
                     <th className="col-records">Records</th>
                     <th className="col-status">
                       <div className="status-header-cell">
@@ -712,18 +687,6 @@ export function BrokerDashboard({
                         </td>
                         <td className="history-action-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                            
-                            {/* Global Audit Trail Button for every file */}
-                            <button
-                              type="button"
-                              className="history-download-btn action-btn-audit"
-                              onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                              title="View complete time-travel audit history and transaction cycles"
-                            >
-                              <ClockIcon size={13} />
-                              <span>Audit Trail</span>
-                            </button>
-                            
                             {/* 1. If unlocked: Show Download & Lock AND Reject */}
                             {!isRevoked && !isRejected && !isApproved && !isLocked && (
                               <>
@@ -826,6 +789,17 @@ export function BrokerDashboard({
                                 <span>Download</span>
                               </button>
                             )}
+
+                            {/* Compact Audit Trail Icon Button at Far Right */}
+                            <button
+                              type="button"
+                              className="action-btn-audit-icon"
+                              onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                              title="View Audit Trail"
+                              aria-label="View Audit Trail"
+                            >
+                              <ClockIcon size={14} />
+                            </button>
 
                           </div>
                         </td>
