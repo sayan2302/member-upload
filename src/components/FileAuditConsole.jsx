@@ -21,8 +21,119 @@ import {
   ZapIcon,
   MessageSquareIcon,
   TableIcon,
+  SparklesIcon,
+  DatabaseIcon,
 } from './Icons.jsx'
 import { parseExcelWorkbook } from '../utils/excelParser.js'
+
+export function AuditConsoleLoader({ fileUuid }) {
+  const [stepIndex, setStepIndex] = useState(0)
+
+  const steps = [
+    { label: 'Ledger Check', desc: 'Fetching metadata and transaction ledger from server...' },
+    { label: 'Parse Cycles', desc: 'Reconstructing historical upload cycles and submissions...' },
+    { label: 'Verify Events', desc: 'Synchronizing timeline milestones and validation diagnostics...' },
+    { label: 'Prepare Console', desc: 'Synthesizing 61-column worksheet grid & diff records...' },
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStepIndex((prev) => (prev < steps.length - 1 ? prev + 1 : prev))
+    }, 700)
+    return () => clearInterval(timer)
+  }, [steps.length])
+
+  const progressPercent = Math.min(100, Math.round(((stepIndex + 1) / steps.length) * 100))
+
+  return (
+    <div className="audit-loader-stage">
+      <div className="audit-loader-card">
+        {/* Top Header Badge */}
+        <div className="audit-loader-top-badge">
+          <span className="audit-loader-pill">
+            <SparklesIcon size={12} className="loader-sparkle-icon" />
+            <span>AUDIT LEDGER ENGINE</span>
+          </span>
+          {fileUuid && (
+            <span className="audit-loader-uuid" title={fileUuid}>
+              UUID: {fileUuid.substring(0, 13)}…
+            </span>
+          )}
+        </div>
+
+        {/* Centerpiece Scanner Graphic */}
+        <div className="audit-scanner-stage">
+          <div className="audit-scanner-orb audit-scanner-orb-outer" />
+          <div className="audit-scanner-orb audit-scanner-orb-inner" />
+          
+          <div className="audit-scanner-doc">
+            <div className="audit-scanner-beam" />
+            <div className="audit-doc-icon-wrap">
+              <ExcelFileIcon size={34} />
+            </div>
+            {/* Animated Mini Grid Lines */}
+            <div className="audit-doc-grid-preview">
+              <div className="audit-grid-line" style={{ width: '85%' }} />
+              <div className="audit-grid-line" style={{ width: '65%' }} />
+              <div className="audit-grid-line" style={{ width: '92%' }} />
+              <div className="audit-grid-line" style={{ width: '45%' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Headline & Dynamic Subtitle */}
+        <div className="audit-loader-headline">
+          <h3 className="audit-loader-title">Assembling File Audit Trail</h3>
+          <p className="audit-loader-desc">{steps[stepIndex].desc}</p>
+        </div>
+
+        {/* Gradient Progress Bar */}
+        <div className="audit-progress-track">
+          <div 
+            className="audit-progress-fill" 
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+
+        {/* Step Sequence Pills */}
+        <div className="audit-steps-row">
+          {steps.map((st, i) => {
+            const isDone = i < stepIndex
+            const isCurrent = i === stepIndex
+            return (
+              <div 
+                key={st.label} 
+                className={`audit-step-chip ${isDone ? 'is-done' : ''} ${isCurrent ? 'is-active' : ''}`}
+              >
+                <span className="step-chip-num">
+                  {isDone ? '✓' : (i + 1)}
+                </span>
+                <span className="step-chip-text">{st.label}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Micro-Skeleton Console Wireframe Preview */}
+        <div className="audit-loader-wireframe">
+          <div className="wireframe-sidebar">
+            <div className="wireframe-pill shimmer" style={{ width: '65%', height: '14px' }} />
+            <div className="wireframe-cycle shimmer" style={{ height: '38px' }} />
+            <div className="wireframe-cycle shimmer" style={{ height: '38px' }} />
+          </div>
+          <div className="wireframe-body">
+            <div className="wireframe-header shimmer" style={{ width: '45%', height: '16px' }} />
+            <div className="wireframe-grid">
+              <div className="wireframe-row shimmer" />
+              <div className="wireframe-row shimmer" />
+              <div className="wireframe-row shimmer" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
   const [loading, setLoading] = useState(true)
@@ -259,11 +370,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
   if (loading) {
     return (
       <main className="page-shell audit-page-shell">
-        <div className="audit-loading-container">
-          <div className="audit-spinner" />
-          <h3>Loading Forensic File Timeline…</h3>
-          <p>Reconstructing hierarchical transaction cycles and historical worksheet snapshots.</p>
-        </div>
+        <AuditConsoleLoader fileUuid={fileUuid} />
       </main>
     )
   }
@@ -512,7 +619,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                   <div className="callout-icon"><AlertTriangleIcon size={16} /></div>
                   <div className="callout-body">
                     <strong>Session Cancelled / Discarded:</strong>
-                    <p>The user initiated this session but chose to cancel without committing changes to the database. All exploratory validation states are captured here for audit forensics.</p>
+                    <p>The user initiated this session but chose to cancel without committing changes to the database. All exploratory validation states are captured here for complete audit compliance and traceability.</p>
                   </div>
                 </div>
               )}

@@ -687,7 +687,7 @@ button {
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: none;
   }
 }
 
@@ -1374,48 +1374,70 @@ button {
 /* ── Fullscreen Worksheet Active Overlay ─────────────────────────────────── */
 .validation-panel.is-fullscreen {
   position: fixed !important;
+  inset: 0 !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 999999 !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  z-index: 9999999 !important;
   background: #ffffff !important;
-  padding: 20px 32px 24px !important;
+  padding: 16px 24px 20px !important;
   margin: 0 !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   display: flex !important;
   flex-direction: column !important;
-  animation: fullscreenFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  animation: fullscreenFadeIn 0.18s ease-out forwards;
 }
 
 @keyframes fullscreenFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.995);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .validation-panel.is-fullscreen .validation-panel-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.validation-panel.is-fullscreen .history-collapsible-wrapper {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.validation-panel.is-fullscreen .history-collapsible-inner {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: visible !important;
 }
 
 .validation-panel.is-fullscreen .worksheet-scroll {
   flex: 1 !important;
-  max-height: calc(100vh - 120px) !important;
-  height: calc(100vh - 120px) !important;
+  max-height: none !important;
+  height: 100% !important;
   border: 1.5px solid #94a3b8 !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+  overflow: auto !important;
 }
 
 .worksheet-scroll {
@@ -4721,6 +4743,31 @@ button {
   border-radius: 10px;
 }
 
+.guide-topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-doc-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid #bfdbfe;
+}
+
+.guide-doc-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 .guide-breadcrumb {
   display: flex;
   align-items: center;
@@ -6248,11 +6295,349 @@ button {
 
 /* Page Shell & Loading/Error Containers */
 .audit-page-shell {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 16px 24px 36px 24px;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 0 32px 0 !important;
   box-sizing: border-box;
   background: #ffffff;
+}
+
+/* ── Premium Holographic Audit Console Loader ──────────────────────────── */
+.audit-loader-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 16px 60px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.audit-loader-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 32px 36px;
+  max-width: 660px;
+  width: 100%;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.6);
+  text-align: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.audit-loader-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #06b6d4, #2563eb);
+  background-size: 200% 100%;
+  animation: shimmer-bar 2.4s linear infinite;
+}
+
+.audit-loader-top-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.audit-loader-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.loader-sparkle-icon {
+  animation: pulse-sparkle 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+  50% { transform: scale(1.2) rotate(15deg); opacity: 1; color: #0284c7; }
+}
+
+.audit-loader-uuid {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* Scanner Stage with Layered Pulse Orbs */
+.audit-scanner-stage {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audit-scanner-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.audit-scanner-orb-outer {
+  width: 96px;
+  height: 96px;
+  border: 1.5px dashed rgba(37, 99, 235, 0.25);
+  animation: spin 16s linear infinite;
+}
+
+.audit-scanner-orb-inner {
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, rgba(6, 182, 212, 0.02) 70%, transparent 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  animation: pulse-ring 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(0.92); opacity: 0.6; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+.audit-scanner-doc {
+  position: relative;
+  width: 58px;
+  height: 68px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.audit-scanner-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #2563eb, #06b6d4, transparent);
+  box-shadow: 0 0 8px 2px rgba(6, 182, 212, 0.6);
+  z-index: 5;
+  animation: scan-sweep 2s ease-in-out infinite;
+}
+
+@keyframes scan-sweep {
+  0% { top: 2px; opacity: 0.3; }
+  50% { top: 62px; opacity: 1; }
+  100% { top: 2px; opacity: 0.3; }
+}
+
+.audit-doc-icon-wrap {
+  color: #16a34a;
+  margin-bottom: 4px;
+}
+
+.audit-doc-grid-preview {
+  width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.audit-grid-line {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 1px;
+}
+
+/* Headline & Subtitle */
+.audit-loader-headline {
+  margin-bottom: 20px;
+}
+
+.audit-loader-title {
+  margin: 0 0 6px 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.audit-loader-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  min-height: 20px;
+  transition: all 0.25s ease;
+}
+
+/* Progress Track */
+.audit-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.audit-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #06b6d4, #2563eb);
+  background-size: 200% 100%;
+  border-radius: 9999px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: shimmer-bar 2s linear infinite;
+}
+
+@keyframes shimmer-bar {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Steps Row */
+.audit-steps-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.audit-step-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.step-chip-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-chip-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audit-step-chip.is-active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+}
+
+.audit-step-chip.is-active .step-chip-num {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.audit-step-chip.is-done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.audit-step-chip.is-done .step-chip-num {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* Micro-Skeleton Wireframe */
+.audit-loader-wireframe {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  opacity: 0.85;
+}
+
+.wireframe-sidebar {
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wireframe-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wireframe-header {
+  border-radius: 6px;
+  background: #e2e8f0;
+}
+
+.wireframe-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wireframe-pill,
+.wireframe-cycle,
+.wireframe-row {
+  border-radius: 6px;
+  background: #e2e8f0;
+}
+
+.wireframe-row {
+  height: 18px;
+  width: 100%;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s infinite ease-in-out;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .audit-loading-container,
@@ -6287,7 +6672,7 @@ button {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 12px 18px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 }
 

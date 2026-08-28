@@ -98,15 +98,25 @@ function DevApp() {
         brokerId={config.brokerId}
         onChangeMode={handleChangeMode}
       />
-      <MemberUpload
-        key={`${config.role}-${config.providerCorpId}-${config.corpId}-${config.brokerId}`}
-        role={config.role}
-        corpId={config.corpId}
-        providerCorpId={config.providerCorpId}
-        brokerId={config.brokerId}
-        corporates={mockCorporates}
-        policies={mockPolicies}
-      />
+      <div className="bmpu-page" style={{ padding: '16px 24px 32px 24px', background: '#ffffff', minHeight: 'auto', boxSizing: 'border-box' }}>
+        <div className="bmpu-breadcrumb-row" style={{ marginBottom: '14px' }}>
+          <nav aria-label="breadcrumb">
+            <ol className="breadcrumb m-b-0" id="portal-breadcrumb-list" style={{ background: 'transparent', padding: 0, margin: 0, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', listStyle: 'none' }}>
+              <li className="breadcrumb-item"><a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>Home</a></li>
+              <li className="breadcrumb-item active" style={{ color: '#64748b' }}>Member Data Upload</li>
+            </ol>
+          </nav>
+        </div>
+        <MemberUpload
+          key={`${config.role}-${config.providerCorpId}-${config.corpId}-${config.brokerId}`}
+          role={config.role}
+          corpId={config.corpId}
+          providerCorpId={config.providerCorpId}
+          brokerId={config.brokerId}
+          corporates={mockCorporates}
+          policies={mockPolicies}
+        />
+      </div>
     </>
   )
 }

@@ -238,13 +238,13 @@ export function ValidationWorksheet({
     return allRemarks
   }
 
-  return (
+  const worksheetContent = (
     <section 
-      className={`upload-card validation-panel ${isCollapsed ? 'is-card-collapsed' : ''} ${isFullscreen ? 'is-fullscreen' : ''}`} 
+      className={`upload-card validation-panel ${isCollapsed && !isFullscreen ? 'is-card-collapsed' : ''} ${isFullscreen ? 'is-fullscreen' : ''}`} 
       aria-label="Interactive Worksheet Preview"
     >
       <div 
-        className={`validation-panel-header corporate-section-header ${isCollapsed ? 'is-header-collapsed' : ''}`}
+        className={`validation-panel-header corporate-section-header ${isCollapsed && !isFullscreen ? 'is-header-collapsed' : ''}`}
       >
         <div>
           <button
@@ -261,8 +261,7 @@ export function ValidationWorksheet({
             </span>
           </button>
         </div>
-
-        <div className={`validation-header-controls ${isCollapsed ? 'is-hidden-actions' : ''}`}>
+        <div className={`validation-header-controls ${isCollapsed && !isFullscreen ? 'is-hidden-actions' : ''}`}>
           {/* Integrated Compact KPI Metrics Strip */}
           <div className="worksheet-metrics-strip">
             <div className="ws-metric-pill is-total" title="Total records in file">
@@ -310,7 +309,7 @@ export function ValidationWorksheet({
         </div>
       </div>
 
-      <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+      <div className={`history-collapsible-wrapper ${isCollapsed && !isFullscreen ? 'is-collapsed' : 'is-expanded'}`}>
         <div className="history-collapsible-inner">
           <div className="worksheet-scroll">
             <table className="worksheet">
@@ -318,93 +317,87 @@ export function ValidationWorksheet({
                 <tr>
                   <th className="row-number-header">Row</th>
                   {columns.map((column) => (
-                    <th key={column}>{columnLabels?.[column] || column}</th>
+                    <th key={column} title={columnLabels[column] || column}>
+                      {columnLabels[column] || column}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {displayedRows.map((row) => (
-                  <tr
-                    key={`${row.sourceRow || row.row}-${row.row}`}
-                    className={row.valid === false ? 'has-row-error' : ''}
-                  >
-                    <th scope="row" className="row-number">
-                      {row.sourceRow || row.row}
-                    </th>
-                    {columns.map((column) => {
-                      const issues = getFieldIssues(row, column)
-                      const hasError = issues.length > 0
-                      const cellVal = row.values?.[column]
-                      const displayVal = cellVal !== null && cellVal !== undefined && cellVal !== '' ? String(cellVal) : ''
-                      const colName = columnLabels?.[column] || column
-                      const tooltip = hasError
-                        ? issues.length > 1
-                          ? `Errors on ${colName}:\n${issues.map((msg, idx) => `• ${msg}`).join('\n')}`
-                          : issues[0]
-                        : undefined
-
-                      return (
-                        <td
-                          key={column}
-                          className={hasError ? 'cell-error' : ''}
-                          aria-label={tooltip}
-                          tabIndex={hasError ? 0 : undefined}
-                          onMouseEnter={(e) => {
-                            if (!hasError) return
-                            const rect = e.currentTarget.getBoundingClientRect()
-                            setActiveTooltip({
-                              colName,
-                              issues,
-                              rect,
-                            })
-                          }}
-                          onMouseLeave={() => {
-                            setActiveTooltip(null)
-                          }}
-                          onFocus={(e) => {
-                            if (!hasError) return
-                            const rect = e.currentTarget.getBoundingClientRect()
-                            setActiveTooltip({
-                              colName,
-                              issues,
-                              rect,
-                            })
-                          }}
-                          onBlur={() => {
-                            setActiveTooltip(null)
-                          }}
-                        >
-                          <div className="cell-content">
-                            <span className="cell-text">
-                              {displayVal || (hasError ? <span className="cell-empty">(empty)</span> : '—')}
-                            </span>
-                            {hasError && (
-                              <span className="cell-error-corner" />
-                            )}
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-                {displayedRows.length === 0 && (
+                {displayedRows.length === 0 ? (
                   <tr>
-                    <td className="empty-results" colSpan={Math.max(columns.length + 1, 1)}>
-                      No rows with errors found.
+                    <td colSpan={columns.length + 1} className="empty-worksheet-cell">
+                      {errorsOnly ? 'No error records found.' : 'No records found.'}
                     </td>
                   </tr>
+                ) : (
+                  displayedRows.map((row, rowIndex) => {
+                    const rowNum = row.sourceRow || row.row || rowIndex + 1
+                    return (
+                      <tr key={rowNum} className={row.valid === false ? 'row-invalid' : ''}>
+                        <td className="row-number-cell">{rowNum}</td>
+                        {columns.map((column) => {
+                          const issues = getFieldIssues(row, column)
+                          const hasIssue = issues.length > 0
+                          const cellValue = row.values?.[column]
+                          const isValueEmpty = cellValue === undefined || cellValue === null || String(cellValue).trim() === ''
+
+                          return (
+                            <td
+                              key={`${rowNum}-${column}`}
+                              className={`worksheet-cell ${hasIssue ? 'has-error' : ''} ${hasIssue ? 'has-tooltip-trigger' : ''}`}
+                              onMouseEnter={(event) => {
+                                if (hasIssue) {
+                                  const rect = event.currentTarget.getBoundingClientRect()
+                                  setActiveTooltip({
+                                    colName: columnLabels[column] || column,
+                                    issues,
+                                    rect,
+                                  })
+                                }
+                              }}
+                              onMouseLeave={() => {
+                                if (hasIssue) {
+                                  setActiveTooltip(null)
+                                }
+                              }}
+                            >
+                              {isValueEmpty ? (
+                                <span className={hasIssue ? 'cell-empty-text' : 'cell-dash'}>
+                                  {hasIssue ? '(empty)' : '—'}
+                                </span>
+                              ) : (
+                                String(cellValue)
+                              )}
+                              {hasIssue && <span className="cell-error-triangle" />}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Compact Showing Records Pill */}
+          <div className="worksheet-status-pill">
+            <span className="ws-status-indicator" />
+            <span className="ws-status-bold">Showing {displayedRows.length}</span> of {filteredRows.length} records
+            {errorsOnly && <span className="ws-status-filter-tag">Filtered (Errors Only)</span>}
+          </div>
+
           {displayedRows.length < filteredRows.length && (
-            <button
-              type="button"
-              className="show-more-button"
-              onClick={() => setVisibleRowCount((count) => count + 75)}
-            >
-              Show 75 more rows
-            </button>
+            <div className="worksheet-load-more-wrap">
+              <button
+                type="button"
+                className="btn-load-more"
+                onClick={() => setVisibleRowCount((prev) => prev + 75)}
+              >
+                Load Next 75 Rows ({filteredRows.length - displayedRows.length} remaining)
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -460,6 +453,12 @@ export function ValidationWorksheet({
       )}
     </section>
   )
+
+  if (isFullscreen && typeof document !== 'undefined') {
+    return createPortal(worksheetContent, document.body)
+  }
+
+  return worksheetContent
 }
 
 export default function MemberUpload({
@@ -601,6 +600,62 @@ export default function MemberUpload({
       // Ignore in non-browser environments
     }
   }
+
+  // Synchronize legacy .NET portal breadcrumb trail with client-side state
+  useEffect(() => {
+    const list = document.getElementById('portal-breadcrumb-list') || document.querySelector('.bmpu-breadcrumb-row .breadcrumb')
+    if (!list) return
+
+    const homeLink = list.querySelector('.breadcrumb-item a')
+    const homeHref = homeLink ? homeLink.getAttribute('href') : (resolvedRole === 'broker' ? '/BrokerHome/IndexBrokerMayfair' : '/HRHome/IndexHR')
+    const mainUploadHref = resolvedRole === 'broker' ? '/BrokerHome/MemberDataUpload' : '/HRHome/BulkMemberPolicyUpload'
+
+    if (activeTab === 'guide') {
+      list.innerHTML = `
+        <li class="breadcrumb-item"><a href="${homeHref}" style="color: #2563eb; text-decoration: none;">Home</a></li>
+        <li class="breadcrumb-item"><a href="${mainUploadHref}" id="portal-bc-to-upload" style="color: #2563eb; text-decoration: none;">Member Data Upload</a></li>
+        <li class="breadcrumb-item active" style="color: #64748b;" aria-current="page">Platform Guidelines &amp; Rules</li>
+      `
+      const backLink = document.getElementById('portal-bc-to-upload')
+      if (backLink) {
+        backLink.onclick = (e) => {
+          e.preventDefault()
+          handleTabChange(resolvedRole === 'broker' ? 'dashboard' : 'upload')
+        }
+      }
+    } else if (activeTab === 'audit') {
+      list.innerHTML = `
+        <li class="breadcrumb-item"><a href="${homeHref}" style="color: #2563eb; text-decoration: none;">Home</a></li>
+        <li class="breadcrumb-item"><a href="${mainUploadHref}" id="portal-bc-to-upload" style="color: #2563eb; text-decoration: none;">Member Data Upload</a></li>
+        <li class="breadcrumb-item active" style="color: #64748b;" aria-current="page">File Audit Trail</li>
+      `
+      const backLink = document.getElementById('portal-bc-to-upload')
+      if (backLink) {
+        backLink.onclick = (e) => {
+          e.preventDefault()
+          handleCloseAudit()
+        }
+      }
+    } else if (activeTab === 'history') {
+      list.innerHTML = `
+        <li class="breadcrumb-item"><a href="${homeHref}" style="color: #2563eb; text-decoration: none;">Home</a></li>
+        <li class="breadcrumb-item"><a href="${mainUploadHref}" id="portal-bc-to-upload" style="color: #2563eb; text-decoration: none;">Member Data Upload</a></li>
+        <li class="breadcrumb-item active" style="color: #64748b;" aria-current="page">Past Uploads</li>
+      `
+      const backLink = document.getElementById('portal-bc-to-upload')
+      if (backLink) {
+        backLink.onclick = (e) => {
+          e.preventDefault()
+          handleTabChange('upload')
+        }
+      }
+    } else {
+      list.innerHTML = `
+        <li class="breadcrumb-item"><a href="${homeHref}" style="color: #2563eb; text-decoration: none;">Home</a></li>
+        <li class="breadcrumb-item active" style="color: #64748b;" aria-current="page">Member Data Upload</li>
+      `
+    }
+  }, [activeTab, resolvedRole])
 
   const [brokerTargetItem, setBrokerTargetItem] = useState(null)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)

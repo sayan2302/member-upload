@@ -58,12 +58,11 @@ export function PlatformGuidePage({
 
   return (
     <div className="guide-page-container">
-      {/* Top Breadcrumb & Navigation Bar */}
+      {/* Top Navigation & Action Bar */}
       <div className="guide-page-topbar">
-        <div className="guide-breadcrumb">
-          <span className="bc-muted">Member Policy Upload</span>
-          <span className="bc-sep">/</span>
-          <span className="bc-active">Platform Guidelines &amp; Rules</span>
+        <div className="guide-topbar-meta">
+          <span className="guide-doc-badge">DOCUMENTATION</span>
+          <span className="guide-doc-title">Platform Guidelines &amp; Operating Rules</span>
         </div>
 
         {onBackToUpload && (
@@ -72,7 +71,7 @@ export function PlatformGuidePage({
             className="guide-back-btn" 
             onClick={onBackToUpload}
           >
-            ← Back to Upload Portal
+            ← {activeRole === 'broker' ? 'Back to Dashboard' : 'Back to Upload Portal'}
           </button>
         )}
       </div>
@@ -163,16 +162,6 @@ export function PlatformGuidePage({
         <span style={{ fontSize: '12px', color: '#64748b' }}>
           Need assistance with custom corporate plan mapping? Contact <strong>support@mayfair.com</strong>
         </span>
-
-        {onBackToUpload && (
-          <button 
-            type="button" 
-            className="guide-back-btn" 
-            onClick={onBackToUpload}
-          >
-            ← Return to Upload Portal
-          </button>
-        )}
       </div>
     </div>
   )
