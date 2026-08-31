@@ -31,7 +31,7 @@ import {
   LayersIcon,
   FilterErrorIcon,
 } from './Icons.jsx'
-import { parseExcelWorkbook } from '../utils/excelParser.js'
+import { parseExcelWorkbook, formatCellDisplayValue } from '../utils/excelParser.js'
 
 export function formatAuditTimestamp(dateStr, { includeSeconds = false } = {}) {
   if (!dateStr) return '—'
@@ -860,43 +860,43 @@ function HistoricalWorksheetTable({
   }, [rows, errorsOnly])
 
   const getCellValue = (r, rIdx, col) => {
+    let raw = '—'
     // 1. Direct match in r.values
     if (r.values && r.values[col] !== undefined && r.values[col] !== null && r.values[col] !== '') {
-      return String(r.values[col])
-    }
+      raw = String(r.values[col])
+    } else {
+      // 2. Normalized key match in r.values
+      const norm = col.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+      if (r.values && r.values[norm] !== undefined && r.values[norm] !== null && r.values[norm] !== '') {
+        raw = String(r.values[norm])
+      } else if (r.values && typeof r.values === 'object') {
+        // 3. Case-insensitive key match in r.values
+        const match = Object.keys(r.values).find((k) => k.toLowerCase() === col.toLowerCase())
+        if (match && r.values[match] !== undefined && r.values[match] !== null && r.values[match] !== '') {
+          raw = String(r.values[match])
+        }
+      }
 
-    // 2. Normalized key match in r.values
-    const norm = col.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-    if (r.values && r.values[norm] !== undefined && r.values[norm] !== null && r.values[norm] !== '') {
-      return String(r.values[norm])
-    }
-
-    // 3. Case-insensitive key match in r.values
-    if (r.values && typeof r.values === 'object') {
-      const match = Object.keys(r.values).find((k) => k.toLowerCase() === col.toLowerCase())
-      if (match && r.values[match] !== undefined && r.values[match] !== null && r.values[match] !== '') {
-        return String(r.values[match])
+      // 4. Fallback to baseRow from raw Excel file
+      if (raw === '—' && Array.isArray(baseRows) && baseRows.length > 0) {
+        const baseRow = baseRows.find((br) => br.sourceRow === r.sourceRow || br.row === r.row) || baseRows[rIdx]
+        if (baseRow && baseRow.values) {
+          if (baseRow.values[col] !== undefined && baseRow.values[col] !== null && baseRow.values[col] !== '') {
+            raw = String(baseRow.values[col])
+          } else if (baseRow.values[norm] !== undefined && baseRow.values[norm] !== null && baseRow.values[norm] !== '') {
+            raw = String(baseRow.values[norm])
+          } else {
+            const bMatch = Object.keys(baseRow.values).find((k) => k.toLowerCase() === col.toLowerCase())
+            if (bMatch && baseRow.values[bMatch] !== undefined && baseRow.values[bMatch] !== null && baseRow.values[bMatch] !== '') {
+              raw = String(baseRow.values[bMatch])
+            }
+          }
+        }
       }
     }
 
-    // 4. Fallback to baseRow from the raw Excel file
-    if (Array.isArray(baseRows) && baseRows.length > 0) {
-      const baseRow = baseRows.find((br) => br.sourceRow === r.sourceRow || br.row === r.row) || baseRows[rIdx]
-      if (baseRow && baseRow.values) {
-        if (baseRow.values[col] !== undefined && baseRow.values[col] !== null && baseRow.values[col] !== '') {
-          return String(baseRow.values[col])
-        }
-        if (baseRow.values[norm] !== undefined && baseRow.values[norm] !== null && baseRow.values[norm] !== '') {
-          return String(baseRow.values[norm])
-        }
-        const bMatch = Object.keys(baseRow.values).find((k) => k.toLowerCase() === col.toLowerCase())
-        if (bMatch && baseRow.values[bMatch] !== undefined && baseRow.values[bMatch] !== null && baseRow.values[bMatch] !== '') {
-          return String(baseRow.values[bMatch])
-        }
-      }
-    }
-
-    return '—'
+    if (raw === '—' || !raw) return '—'
+    return formatCellDisplayValue(raw, col)
   }
 
   const getFieldError = (r, col) => {

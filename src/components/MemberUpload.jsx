@@ -10,6 +10,8 @@ import { InteractiveVideoSimulator } from './InteractiveVideoSimulator.jsx'
 import { PlatformGuidePage } from './PlatformGuidePage.jsx'
 import { FileAuditConsole } from './FileAuditConsole.jsx'
 import { downloadFile } from '../utils/fileDownloader.js'
+import { formatCellDisplayValue } from '../utils/excelParser.js'
+import ExcelJS from 'exceljs'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -361,7 +363,8 @@ export function ValidationWorksheet({
                         {columns.map((column) => {
                           const issues = getFieldIssues(row, column)
                           const hasIssue = issues.length > 0
-                          const cellValue = row.values?.[column]
+                          const rawCellValue = row.values?.[column]
+                          const cellValue = formatCellDisplayValue(rawCellValue, column)
                           const isValueEmpty = cellValue === undefined || cellValue === null || String(cellValue).trim() === ''
 
                           return (
@@ -800,7 +803,7 @@ export default function MemberUpload({
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
     setIsDownloading(true)
     setMessage('')
 
@@ -822,11 +825,70 @@ export default function MemberUpload({
       }
 
       const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?${params.toString()}`
-      downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
+
+      const res = await fetch(endpoint, {
+        headers: {
+          'x-api-key': apiConfig.apiKey,
+        },
+      })
+
+      if (!res.ok) {
+        downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
+        return
+      }
+
+      const blob = await res.blob()
+      const arrayBuffer = await blob.arrayBuffer()
+
+      const workbook = new ExcelJS.Workbook()
+      await workbook.xlsx.load(arrayBuffer)
+      const worksheet = workbook.worksheets[0]
+
+      if (worksheet) {
+        const headerRow = worksheet.getRow(1)
+        const dateColNumbers = []
+
+        headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+          const val = String(cell.value || '').toLowerCase()
+          if (
+            val.includes('date') ||
+            val.includes('dob') ||
+            val.includes('effective') ||
+            val.includes('expiry') ||
+            val.includes('entry') ||
+            val.includes('birth')
+          ) {
+            dateColNumbers.push(colNumber)
+          }
+        })
+
+        dateColNumbers.forEach((colNum) => {
+          const col = worksheet.getColumn(colNum)
+          col.numFmt = 'yyyy-mm-dd'
+
+          for (let r = 2; r <= 500; r++) {
+            const cell = worksheet.getRow(r).getCell(colNum)
+            cell.numFmt = 'yyyy-mm-dd'
+          }
+        })
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const enhancedBlob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const downloadUrl = URL.createObjectURL(enhancedBlob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(downloadUrl)
     } catch (err) {
       console.error('[Download Template] Error:', err)
-      setMessage('Unable to download template. Please try again.')
-      setMessageType('error')
+      const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?for=${resolvedRole === 'broker' ? 'broker' : 'hr'}`
+      downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
     } finally {
       setTimeout(() => setIsDownloading(false), 1500)
     }

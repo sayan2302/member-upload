@@ -84,52 +84,84 @@ export function BrokerDashboard({
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
 
   const getUploaderInfo = useCallback((item) => {
-    const isBroker = (item?.uploaderRole || item?.templateType || (item?.role === 'broker' ? 'broker' : 'hr')).toLowerCase() === 'broker'
-
     if (!item) {
       return {
         username: '—',
         email: '—',
-        roleTag: isBroker ? 'Broker' : 'HR',
+        roleTag: 'HR',
       }
     }
 
-    const rawName = (item.uploadedByName || item.uploadedBy || '').trim()
-    const isValidName = Boolean(
-      rawName &&
-      rawName.toLowerCase() !== 'system' &&
-      !rawName.toLowerCase().includes('system') &&
-      !rawName.toLowerCase().includes('hr.admin@') &&
-      rawName.toLowerCase() !== 'hr admin'
-    )
+    const isBroker = (
+      item?.uploaderRole ||
+      item?.uploader_role ||
+      item?.templateType ||
+      (item?.role === 'broker' ? 'broker' : 'hr')
+    ).toLowerCase() === 'broker'
 
-    const rawEmail = (item.uploadedByEmail || '').trim()
-    const isValidEmail = Boolean(
-      rawEmail &&
-      rawEmail.toLowerCase() !== 'system' &&
-      !rawEmail.toLowerCase().includes('system') &&
-      rawEmail.includes('@') &&
-      !rawEmail.toLowerCase().includes('hr.admin@mayfair.com') &&
-      rawEmail.toLowerCase() !== 'hr@company.com'
-    )
+    const rawName = (
+      item?.uploadedByName ||
+      item?.uploaded_by_name ||
+      item?.uploadedBy ||
+      item?.uploaded_by ||
+      item?.uploaderName ||
+      item?.uploader_name ||
+      item?.created_by_name ||
+      item?.created_by ||
+      item?.createdBy ||
+      item?.actor_name ||
+      item?.actorName ||
+      item?.user_name ||
+      item?.userName ||
+      item?.name ||
+      ''
+    ).toString().trim()
 
+    const rawEmail = (
+      item?.uploadedByEmail ||
+      item?.uploaded_by_email ||
+      item?.uploaderEmail ||
+      item?.uploader_email ||
+      item?.created_by_email ||
+      item?.createdByEmail ||
+      item?.actor_email ||
+      item?.actorEmail ||
+      item?.user_email ||
+      item?.userEmail ||
+      item?.email ||
+      ''
+    ).toString().trim()
+
+    let email = rawEmail || '—'
     let username = '—'
-    let email = isValidEmail ? rawEmail : '—'
 
-    // 1. Resolve Username
-    if (isValidName && !rawName.includes('@')) {
+    if (rawName && !rawName.includes('@')) {
       username = rawName
-    } else if (isValidEmail) {
+    } else if (rawEmail && rawEmail.includes('@')) {
       const prefix = rawEmail.split('@')[0]
       username = prefix
         .split(/[._-]/)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ')
+    } else if (rawName) {
+      username = rawName
+    }
+
+    if (username === '—' && email !== '—') {
+      if (email.includes('@')) {
+        const prefix = email.split('@')[0]
+        username = prefix
+          .split(/[._-]/)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ')
+      } else {
+        username = email
+      }
     }
 
     return {
-      username,
-      email,
+      username: username || '—',
+      email: email || '—',
       roleTag: isBroker ? 'Broker' : 'HR',
     }
   }, [])
