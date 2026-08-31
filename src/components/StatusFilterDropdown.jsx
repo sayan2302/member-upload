@@ -32,7 +32,7 @@ export function StatusFilterDropdown({
 
   const options = [
     { key: 'all', label: 'All Statuses' },
-    { key: 'pending', label: 'Pending Review', dotClass: 'dot-pending' },
+    { key: 'pending', label: 'Pending', dotClass: 'dot-pending' },
     ...(isBroker ? [{ key: 'locked', label: 'Locked', dotClass: 'dot-locked' }] : []),
     { key: 'approved', label: 'Approved', dotClass: 'dot-approved' },
     { key: 'failed', label: 'Failed / Rejected', dotClass: 'dot-failed' },

@@ -26,6 +26,80 @@ import {
 } from './Icons.jsx'
 import { parseExcelWorkbook } from '../utils/excelParser.js'
 
+export function formatAuditTimestamp(dateStr, { includeSeconds = false } = {}) {
+  if (!dateStr) return '—'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return '—'
+
+    const now = new Date()
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+
+    const timeOptions = {
+      hour: 'numeric',
+      minute: '2-digit',
+      ...(includeSeconds ? { second: '2-digit' } : {}),
+      hour12: true,
+    }
+    const formattedTime = d.toLocaleTimeString(undefined, timeOptions)
+
+    if (isToday) {
+      return formattedTime
+    }
+
+    const dateOptions = {
+      day: 'numeric',
+      month: 'short',
+    }
+    const formattedDate = d.toLocaleDateString(undefined, dateOptions)
+    return `${formattedDate}, ${formattedTime}`
+  } catch {
+    return '—'
+  }
+}
+
+export function getActorIdentity(actorObj, fileInfo = {}) {
+  let name = ''
+  let email = ''
+
+  if (typeof actorObj === 'string') {
+    const cleanStr = actorObj.trim()
+    if (cleanStr.toLowerCase() !== 'system' && cleanStr.toLowerCase() !== 'system user') {
+      if (cleanStr.includes('@')) {
+        email = cleanStr
+      } else {
+        name = cleanStr
+      }
+    }
+  } else if (actorObj && typeof actorObj === 'object') {
+    name = actorObj.name || actorObj.uploadedByName || actorObj.username || actorObj.created_by_name || ''
+    email = actorObj.email || actorObj.uploadedByEmail || actorObj.userEmail || actorObj.created_by_email || ''
+
+    if (name.toLowerCase() === 'system' || name.toLowerCase() === 'system user') name = ''
+    if (email.toLowerCase() === 'system' || email.toLowerCase() === 'system user') email = ''
+  }
+
+  // Fallback to genuine file uploader metadata from database
+  if (!name && !email) {
+    name = fileInfo.uploadedByName || fileInfo.uploaded_by_name || fileInfo.username || fileInfo.uploadedBy || ''
+    email = fileInfo.uploadedByEmail || fileInfo.uploaded_by_email || fileInfo.email || fileInfo.userEmail || ''
+  }
+
+  if (!name && email) name = email
+  if (!email && name && name.includes('@')) email = name
+
+  const role = actorObj?.role || fileInfo?.role || (email.toLowerCase().includes('broker') ? 'broker' : 'hr')
+
+  return {
+    name: name || 'HR User',
+    email: email !== name ? email : '',
+    role: String(role).toUpperCase()
+  }
+}
+
 export function AuditConsoleLoader({ fileUuid }) {
   const [stepIndex, setStepIndex] = useState(0)
 
@@ -484,31 +558,16 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                           <span className="cycle-title-count" style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
                             Cycle {cycle.cycle_seq || cIdx + 1}
                           </span>
-                          <span className={`cycle-status-pill is-${(cycle.cycle_status || 'committed').toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            {isAbandoned ? (
-                              <><AlertTriangleIcon size={10} /><span>Cancelled</span></>
-                            ) : isRejected ? (
-                              <><CloseIcon size={10} /><span>Rejected</span></>
-                            ) : isForce ? (
-                              <><ZapIcon size={10} /><span>Force Approved</span></>
-                            ) : (
-                              <><CheckCircleIcon size={10} /><span>Committed</span></>
-                            )}
-                          </span>
                         </div>
                         <span className="cycle-toggle-icon">
                           {isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
                         </span>
                       </div>
 
-                      <div className="cycle-meta-row" style={{ marginTop: '6px' }}>
-                        <span className="cycle-actor-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <UserIcon size={11} />
-                          <span>{cycle.actor?.email || cycle.actor?.user_id || 'System'}</span>
-                        </span>
-                        <span className="cycle-date-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <div className="cycle-meta-row" style={{ marginTop: '4px' }}>
+                        <span className="cycle-date-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b' }}>
                           <ClockIcon size={11} />
-                          <span>{new Date(cycle.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>{formatAuditTimestamp(cycle.started_at, { includeSeconds: false })}</span>
                         </span>
                       </div>
                     </div>
@@ -535,7 +594,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                                 <div className="substep-top">
                                   <span className="substep-seq">Step {sub.sub_seq || `${cIdx + 1}.${sIdx + 1}`}</span>
                                   <span className="substep-time">
-                                    {new Date(sub.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    {formatAuditTimestamp(sub.timestamp, { includeSeconds: true })}
                                   </span>
                                 </div>
                                 <div className="substep-title">{sub.action_title || sub.action_code}</div>
@@ -581,23 +640,33 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                   </div>
                 </div>
 
-                <div className="event-actor-card">
-                  <div className="actor-avatar-badge">
-                    {activeTx.actor?.role === 'broker' ? 'BR' : 'HR'}
-                  </div>
-                  <div className="actor-info">
-                    <div className="actor-name-row">
-                      <span className="actor-name">{activeTx.actor?.email || activeTx.actor?.user_id || 'System User'}</span>
-                      <span className={`actor-role-pill is-${(activeTx.actor?.role || 'user').toLowerCase()}`}>
-                        {(activeTx.actor?.role || 'USER').toUpperCase()}
-                      </span>
+                {(() => {
+                  const actor = getActorIdentity(activeTx.actor || activeTx.parentCycle?.actor, fileInfo)
+                  return (
+                    <div className="event-actor-card">
+                      <div className="actor-avatar-badge">
+                        {actor.role === 'BROKER' ? 'BR' : 'HR'}
+                      </div>
+                      <div className="actor-info">
+                        <div className="actor-name-row">
+                          <span className="actor-name">{actor.name}</span>
+                          <span className={`actor-role-pill is-${actor.role.toLowerCase()}`}>
+                            {actor.role}
+                          </span>
+                        </div>
+                        {actor.email && (
+                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>
+                            {actor.email}
+                          </div>
+                        )}
+                        <span className="actor-time" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          <ClockIcon size={11} />
+                          <span>{new Date(activeTx.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
+                        </span>
+                      </div>
                     </div>
-                    <span className="actor-time" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <ClockIcon size={11} />
-                      <span>{new Date(activeTx.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
-                    </span>
-                  </div>
-                </div>
+                  )
+                })()}
               </div>
 
               {/* Special Context Banners */}

@@ -23,6 +23,8 @@ export function BrokerUploadModal({
   item,
   brokerId,
   apiConfig,
+  userEmail = '',
+  userName = '',
   onClose,
   onSuccess
 }) {
@@ -117,7 +119,7 @@ export function BrokerUploadModal({
         throw new Error(data.detail || data.error || `Validation failed (${response.status})`)
       }
 
-      const forceAllowed = data.allowBrokerForceIngest === true || data.allow_broker_force_ingest === true
+      const forceAllowed = data.allowBrokerForceIngest !== false && data.allow_broker_force_ingest !== false
       setAllowBrokerForceIngest(forceAllowed)
 
       const acceptedRows = Array.isArray(data.acceptedRows) ? data.acceptedRows : []
@@ -261,11 +263,21 @@ export function BrokerUploadModal({
         formData.append('worksheet_snapshot', JSON.stringify(worksheetSnapshot))
       }
 
+      if (userName) {
+        formData.append('uploaded_by_name', userName)
+      }
+      if (userEmail) {
+        formData.append('uploaded_by_email', userEmail)
+        formData.append('uploaded_by', userEmail)
+      }
+
       const response = await fetch(`${apiConfig.apiBaseUrl}/uploads3/broker-upload/${item.uuid}`, {
         method: 'POST',
         headers: { 
           'x-api-key': apiConfig.apiKey,
-          'x-user-id': String(brokerId)
+          'x-user-id': String(brokerId),
+          ...(userName ? { 'x-user-name': userName } : {}),
+          ...(userEmail ? { 'x-user-email': userEmail } : {}),
         },
         body: formData,
       })

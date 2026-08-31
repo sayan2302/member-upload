@@ -481,6 +481,9 @@ export default function MemberUpload({
   optionsUrl,
   corporates: initialCorporates,
   policies: initialPolicies,
+  userEmail = '',
+  userName = '',
+  userId = '',
 } = {}) {
   const resolvedRole = (role || 'hr').toLowerCase()
   const firstCorpId = Array.isArray(initialCorporates) && initialCorporates.length > 0 && initialCorporates[0].id && initialCorporates[0].id !== '0'
@@ -847,6 +850,11 @@ export default function MemberUpload({
       formData.append('sub_corporate_names', JSON.stringify(corporates.map((c) => c.name)))
       formData.append('sub_corporate_ids', JSON.stringify(corporates.map((c) => c.id)))
 
+      if (userEmail) {
+        formData.append('user_email', userEmail)
+        formData.append('uploaded_by_email', userEmail)
+      }
+
       const validateEndpoint = resolvedRole === 'broker'
         ? `${apiConfig.apiBaseUrl}/broker/upload/validate`
         : `${apiConfig.apiBaseUrl}/validate/preview`
@@ -855,7 +863,8 @@ export default function MemberUpload({
         method: 'POST',
         headers: { 
           'x-api-key': apiConfig.apiKey,
-          'x-user-id': String(defaultBrokerId),
+          'x-user-id': String(userId || defaultBrokerId),
+          ...(userEmail ? { 'x-user-email': userEmail } : {}),
         },
         body: formData,
       })
@@ -869,7 +878,7 @@ export default function MemberUpload({
         setCurrentFileUuid(data.uuid || data.file_uuid)
       }
 
-      const forceAllowed = data.allowBrokerForceIngest === true || data.allow_broker_force_ingest === true
+      const forceAllowed = data.allowBrokerForceIngest !== false && data.allow_broker_force_ingest !== false
       setAllowBrokerForceIngest(forceAllowed)
 
       const acceptedRows = Array.isArray(data.acceptedRows) ? data.acceptedRows : []
@@ -935,6 +944,13 @@ export default function MemberUpload({
         formData.append('uuid', currentFileUuid)
         formData.append('file_uuid', currentFileUuid)
       }
+      if (userName) {
+        formData.append('uploaded_by_name', userName)
+      }
+      if (userEmail) {
+        formData.append('uploaded_by_email', userEmail)
+        formData.append('uploaded_by', userEmail)
+      }
       formData.append('sub_corporates', JSON.stringify(corporates))
       formData.append('template_type', resolvedRole === 'broker' ? 'broker' : 'hr')
       formData.append('no_of_rows', String(validationSummary?.totalRows || 0))
@@ -988,7 +1004,9 @@ export default function MemberUpload({
           method: 'POST',
           headers: { 
             'x-api-key': apiConfig.apiKey,
-            'x-user-id': String(defaultBrokerId)
+            'x-user-id': String(userId || defaultBrokerId),
+            ...(userName ? { 'x-user-name': userName } : {}),
+            ...(userEmail ? { 'x-user-email': userEmail } : {}),
           },
           body: formData,
         })
@@ -1076,6 +1094,9 @@ export default function MemberUpload({
           method: 'POST',
           headers: { 
             'x-api-key': apiConfig.apiKey,
+            'x-user-id': String(userId || 'system'),
+            ...(userName ? { 'x-user-name': userName } : {}),
+            ...(userEmail ? { 'x-user-email': userEmail } : {}),
           },
           body: formData,
         })
@@ -1547,6 +1568,8 @@ export default function MemberUpload({
                 corporates={corporates}
                 role={resolvedRole}
                 apiConfig={apiConfig}
+                userEmail={userEmail}
+                userName={userName}
                 refreshTrigger={successModal?.uuid || submissionReceipt?.uuid}
                 onNavigateToUpload={() => setActiveTab('upload')}
                 onOpenAudit={handleOpenAudit}
@@ -1570,8 +1593,12 @@ export default function MemberUpload({
           <section className="upload-card submissions-container-card" aria-label="File Submissions">
             <BrokerDashboard
               brokerId={defaultBrokerId}
+              corpId={defaultCorpId}
+              providerCorpId={defaultProviderCorpId}
               corporates={corporates}
               apiConfig={apiConfig}
+              userEmail={userEmail}
+              userName={userName}
               refreshKey={historyRefreshKey}
               onOpenUploadModal={(item) => {
                 setBrokerTargetItem(item)
@@ -1587,6 +1614,8 @@ export default function MemberUpload({
             item={brokerTargetItem}
             brokerId={defaultBrokerId}
             apiConfig={apiConfig}
+            userEmail={userEmail}
+            userName={userName}
             onClose={() => setBrokerTargetItem(null)}
             onSuccess={(result) => {
               setBrokerTargetItem(null)

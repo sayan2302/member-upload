@@ -192,6 +192,22 @@ function initMemberUpload() {
       policies = globalConfig.policies
     }
 
+    const userEmailAttr = targetElement.getAttribute('data-user-email')
+    const userNameAttr = targetElement.getAttribute('data-user-name')
+    const userIdAttr = targetElement.getAttribute('data-user-id')
+
+    const domUser = document.querySelector('.header-user span')?.textContent?.trim() || ''
+
+    const userEmail = (userEmailAttr && userEmailAttr.trim() !== '')
+      ? userEmailAttr.trim()
+      : (globalConfig.userEmail || globalConfig.user_email || (domUser.includes('@') ? domUser : ''))
+    const userName = (userNameAttr && userNameAttr.trim() !== '')
+      ? userNameAttr.trim()
+      : (globalConfig.userName || globalConfig.user_name || domUser || userEmail)
+    const userId = (userIdAttr && userIdAttr.trim() !== '')
+      ? userIdAttr.trim()
+      : (globalConfig.userId || globalConfig.user_id || '')
+
     createRoot(targetElement).render(
       <StrictMode>
         <MemberUpload
@@ -202,6 +218,9 @@ function initMemberUpload() {
           optionsUrl={optionsUrl}
           corporates={corporates}
           policies={policies}
+          userEmail={userEmail}
+          userName={userName}
+          userId={userId}
         />
       </StrictMode>
     )

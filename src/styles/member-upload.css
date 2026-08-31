@@ -1513,7 +1513,7 @@ button {
 .worksheet td.has-error {
   background: #fff1f2 !important;
   border-bottom: 1px solid #fecdd3 !important;
-  cursor: help;
+  cursor: default;
 }
 
 .worksheet .cell-content {
@@ -2593,6 +2593,13 @@ button {
   gap: 8px;
 }
 
+.history-file-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
 .history-filename {
   display: block;
   font-weight: 600;
@@ -2601,6 +2608,15 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.history-file-records-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: -0.01em;
 }
 
 .history-uploader-name {
@@ -2678,7 +2694,7 @@ button {
   border-radius: 10px;
   padding: 14px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
-  z-index: 100;
+  z-index: 1000;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -2690,12 +2706,23 @@ button {
   font-weight: normal;
 }
 
+.status-popover-card.popover-right {
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
+}
+
 .status-info-popover-wrapper:hover .status-popover-card,
 .status-info-popover-wrapper:focus-within .status-popover-card {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transform: translateX(-50%) translateY(0);
+}
+
+.status-info-popover-wrapper:hover .status-popover-card.popover-right,
+.status-info-popover-wrapper:focus-within .status-popover-card.popover-right {
+  transform: translateY(0);
 }
 
 .status-popover-header {
@@ -2795,7 +2822,7 @@ button {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
-  cursor: help;
+  cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -3026,6 +3053,283 @@ button {
 .broker-rejected-pill:hover {
   background: #ffe4e6;
   border-color: #f43f5e;
+}
+
+/* ── Broker Dashboard Icon-Only Actions & Awesome Glassmorphic Tooltip ─────── */
+.broker-actions-grid {
+  display: grid;
+  grid-template-columns: 32px 32px 32px 32px 32px;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+  margin-left: auto;
+  width: fit-content;
+}
+
+.broker-action-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.broker-action-slot.slot-upload { grid-column: 1; }
+.broker-action-slot.slot-unlock { grid-column: 2; }
+.broker-action-slot.slot-reject { grid-column: 3; }
+.broker-action-slot.slot-download { grid-column: 4; }
+.broker-action-slot.slot-audit { grid-column: 5; }
+
+.broker-icon-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.broker-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.12s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.broker-icon-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.08);
+}
+
+.broker-icon-btn:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.95);
+}
+
+.broker-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Variant Styles */
+.broker-icon-btn.btn-upload {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #7c3aed;
+}
+.broker-icon-btn.btn-upload:hover:not(:disabled) {
+  background: #7c3aed;
+  border-color: #6d28d9;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
+.broker-icon-btn.btn-unlock {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #ea580c;
+}
+.broker-icon-btn.btn-unlock:hover:not(:disabled) {
+  background: #ea580c;
+  border-color: #c2410c;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.4);
+}
+
+.broker-icon-btn.btn-reject {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #e11d48;
+}
+.broker-icon-btn.btn-reject:hover:not(:disabled) {
+  background: #e11d48;
+  border-color: #be123c;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
+}
+
+.broker-icon-btn.btn-lock {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #059669;
+}
+.broker-icon-btn.btn-lock:hover:not(:disabled) {
+  background: #059669;
+  border-color: #047857;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);
+}
+
+.broker-icon-btn.btn-download {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+.broker-icon-btn.btn-download:hover:not(:disabled) {
+  background: #16a34a;
+  border-color: #15803d;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);
+}
+
+.broker-icon-btn.btn-locked-other {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #ea580c;
+  opacity: 0.9;
+}
+.broker-icon-btn.btn-locked-other:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.broker-icon-btn.btn-audit {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
+}
+.broker-icon-btn.btn-audit:hover:not(:disabled) {
+  background: #0284c7;
+  border-color: #0369a1;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+}
+
+/* ── Awesome Floating Glassmorphic Tooltip ───────────────────────────────── */
+.broker-tooltip {
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px) scale(0.92);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  padding: 6px 11px;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1), transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.16s;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.45), 0 4px 10px -2px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.broker-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.96) transparent transparent transparent;
+}
+
+.broker-icon-btn-wrap:hover .broker-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* ── Global Anti-Clipping Rules for Table Action Tooltips ───────────────── */
+.history-action-cell .broker-tooltip,
+.broker-actions-grid .broker-tooltip,
+.broker-action-slot .broker-tooltip,
+.broker-tooltip.tooltip-right {
+  left: auto !important;
+  right: -4px !important;
+  transform: translateY(4px) scale(0.92) !important;
+  align-items: flex-end !important;
+  text-align: right !important;
+  z-index: 999999 !important;
+}
+
+.history-action-cell .broker-tooltip::after,
+.broker-actions-grid .broker-tooltip::after,
+.broker-action-slot .broker-tooltip::after,
+.broker-tooltip.tooltip-right::after {
+  left: auto !important;
+  right: 14px !important;
+  transform: none !important;
+}
+
+.history-action-cell .broker-icon-btn-wrap:hover .broker-tooltip,
+.broker-actions-grid .broker-icon-btn-wrap:hover .broker-tooltip,
+.broker-action-slot .broker-icon-btn-wrap:hover .broker-tooltip,
+.broker-icon-btn-wrap:hover .broker-tooltip.tooltip-right {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.tooltip-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.tooltip-desc {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-top: 1.5px;
+}
+
+/* ── Uploader Identity Cell (No Tooltip) ────────────────────────────────── */
+.broker-uploader-cell-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: default;
+  width: fit-content;
+}
+
+.broker-uploader-name {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.broker-uploader-email {
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.3;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.broker-uploader-time {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 /* Preset Reason Chips in Rejection Modal */

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -23,6 +23,8 @@ export function UploadHistory({
   corporates = [],
   role = 'hr',
   apiConfig,
+  userEmail = '',
+  userName = '',
   refreshTrigger,
   onNavigateToUpload,
   onOpenAudit,
@@ -38,6 +40,57 @@ export function UploadHistory({
   const [endDate, setEndDate] = useState('')
   const [sortBy, setSortBy] = useState('date') // 'date' | 'name' | 'records'
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
+
+  const getUploaderInfo = useCallback((item) => {
+    const isBroker = (item?.uploaderRole || item?.templateType || (item?.role === 'broker' ? 'broker' : 'hr')).toLowerCase() === 'broker'
+
+    if (!item) {
+      return {
+        username: '—',
+        email: '—',
+        roleTag: isBroker ? 'Broker' : 'HR',
+      }
+    }
+
+    const rawName = (item.uploadedByName || item.uploadedBy || '').trim()
+    const isValidName = Boolean(
+      rawName &&
+      rawName.toLowerCase() !== 'system' &&
+      !rawName.toLowerCase().includes('system') &&
+      !rawName.toLowerCase().includes('hr.admin@') &&
+      rawName.toLowerCase() !== 'hr admin'
+    )
+
+    const rawEmail = (item.uploadedByEmail || '').trim()
+    const isValidEmail = Boolean(
+      rawEmail &&
+      rawEmail.toLowerCase() !== 'system' &&
+      !rawEmail.toLowerCase().includes('system') &&
+      rawEmail.includes('@') &&
+      !rawEmail.toLowerCase().includes('hr.admin@mayfair.com') &&
+      rawEmail.toLowerCase() !== 'hr@company.com'
+    )
+
+    let username = '—'
+    let email = isValidEmail ? rawEmail : '—'
+
+    // 1. Resolve Username
+    if (isValidName && !rawName.includes('@')) {
+      username = rawName
+    } else if (isValidEmail) {
+      const prefix = rawEmail.split('@')[0]
+      username = prefix
+        .split(/[._-]/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+    }
+
+    return {
+      username,
+      email,
+      roleTag: isBroker ? 'Broker' : 'HR',
+    }
+  }, [])
 
   // Delete / Recall states
   const [itemToDelete, setItemToDelete] = useState(null)
@@ -135,7 +188,7 @@ export function UploadHistory({
           headers: {
             'x-api-key': apiConfig.apiKey,
             'x-user-id': 'hr_admin',
-            'x-user-email': itemToDelete.uploadedByEmail || 'hr.admin@mayfair.com',
+            'x-user-email': itemToDelete.uploadedByEmail || userEmail || '',
           },
         }
       )
@@ -200,13 +253,8 @@ export function UploadHistory({
           style={{ cursor: item.rejectionDetails ? 'pointer' : 'default' }}
           title={item.rejectionDetails ? "Click to view broker rejection comments" : "Submission rejected by broker"}
         >
-          <AlertTriangleIcon size={12} />
+          <MessageSquareIcon size={12} />
           <span>Rejected</span>
-          {item.rejectionDetails && (
-            <span className="status-note-icon-btn" title="View broker comments">
-              <MessageSquareIcon size={11} />
-            </span>
-          )}
         </span>
       )
     }
@@ -221,7 +269,7 @@ export function UploadHistory({
     return (
       <span className="history-badge is-pending">
         <ClockIcon size={12} />
-        <span>Pending Review</span>
+        <span>Pending</span>
       </span>
     )
   }
@@ -425,7 +473,6 @@ export function UploadHistory({
               <tr>
                 <th className="col-file">File Name</th>
                 <th className="col-uploader">Uploaded By / On</th>
-                <th className="col-records">Records</th>
                 <th className="col-status">
                   <div className="status-header-cell">
                     <span>Status</span>
@@ -444,7 +491,7 @@ export function UploadHistory({
                         <div className="status-popover-item">
                           <span className="status-dot dot-pending" />
                           <div className="status-popover-text">
-                            <div className="status-popover-label">Pending Review</div>
+                            <div className="status-popover-label">Pending</div>
                             <div className="status-popover-desc">Uploaded by HR; awaiting broker review and validation.</div>
                           </div>
                         </div>
@@ -492,7 +539,56 @@ export function UploadHistory({
                     </div>
                   </div>
                 </th>
-                <th className="col-actions" style={{ textAlign: 'right' }}>Action</th>
+                <th className="col-actions" style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                    <span>Action</span>
+                    <div className="status-info-popover-wrapper">
+                      <button 
+                        type="button" 
+                        className="status-info-trigger" 
+                        aria-label="Action Buttons Lifecycle Guide"
+                        title="Click or hover to view action button guide"
+                      >
+                        <InfoIcon size={13} />
+                      </button>
+                      <div className="status-popover-card popover-right">
+                        <div className="status-popover-header">Action Buttons Guide</div>
+                        
+                        {role === 'hr' && (
+                          <div className="status-popover-item">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#fee2e2', color: '#dc2626', flexShrink: 0 }}>
+                              <TrashIcon size={13} />
+                            </div>
+                            <div className="status-popover-text">
+                              <div className="status-popover-label" style={{ color: '#dc2626' }}>Revoke Submission</div>
+                              <div className="status-popover-desc">Allows HR to revoke a file submission before a broker locks or reviews it.</div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="status-popover-item">
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#dcfce7', color: '#16a34a', flexShrink: 0 }}>
+                            <DownloadIcon size={13} />
+                          </div>
+                          <div className="status-popover-text">
+                            <div className="status-popover-label" style={{ color: '#16a34a' }}>Download Excel File</div>
+                            <div className="status-popover-desc">Download original Excel file to inspect data or fix issues on rejected files.</div>
+                          </div>
+                        </div>
+
+                        <div className="status-popover-item">
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', flexShrink: 0 }}>
+                            <ClockIcon size={13} />
+                          </div>
+                          <div className="status-popover-text">
+                            <div className="status-popover-label" style={{ color: '#0284c7' }}>File History</div>
+                            <div className="status-popover-desc">View complete action timeline, events, logs, and state changes for the file.</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -500,84 +596,94 @@ export function UploadHistory({
                 <tr key={item.uuid}>
                   <td className="history-file-cell">
                     <div className="history-file-info">
-                      <ExcelFileIcon size={22} />
-                      <span 
-                        className="history-filename is-clickable" 
-                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                        title={`Click to view audit timeline: ${item.fileName}`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#cbd5e1' }}
-                      >
-                        {item.fileName}
-                      </span>
+                      <ExcelFileIcon size={24} />
+                      <div className="history-file-text-wrap">
+                        <span className="history-filename" title={item.fileName}>
+                          {item.fileName}
+                        </span>
+                        <span className="history-file-records-badge" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
+                          {item.noOfRows ?? item.validRows ?? 0} records
+                        </span>
+                      </div>
                     </div>
                   </td>
                   <td className="history-date-cell">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span 
-                        className="history-uploader-name"
-                        title={item.uploadedByEmail || item.uploadedBy || 'HR Admin'}
-                      >
-                        {item.uploadedByEmail && item.uploadedByEmail !== 'system' 
-                          ? item.uploadedByEmail 
-                          : (item.uploadedBy || 'hr.admin@mayfair.com')}
-                      </span>
-                      <span style={{ color: '#64748b', fontSize: '11px' }}>{formatDate(item.uploadedOn)}</span>
-                    </div>
-                  </td>
-                  <td className="history-rows-cell" style={{ whiteSpace: 'nowrap' }}>
-                    <span className="valid-count" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
-                      {item.noOfRows ?? item.validRows ?? 0}
-                    </span>
+                    {(() => {
+                      const uploader = getUploaderInfo(item)
+                      return (
+                        <div className="broker-uploader-cell-wrap">
+                          <span className="broker-uploader-name">{uploader.username}</span>
+                          <span className="broker-uploader-email">{uploader.email}</span>
+                          <span className="broker-uploader-time">{formatDate(item.uploadedOn)}</span>
+                        </div>
+                      )
+                    })()}
                   </td>
                   <td className="history-status-cell">{getStatusBadge(item)}</td>
                   <td className="history-action-cell" style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                      {item.status === 'revoked' ? (
-                        <span className="history-revoked-tag" title="This file was revoked by HR and cannot be downloaded.">
-                          Revoked
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="history-download-btn"
-                          onClick={() => handleDownload(item)}
-                          disabled={downloadingUuid === item.uuid}
-                          title={item.status === 'rejected' ? "Download original file to inspect and fix issues" : "Download original file"}
-                        >
-                          <DownloadIcon size={13} />
-                          <span>
-                            {downloadingUuid === item.uuid ? 'Downloading…' : 'Download'}
-                          </span>
-                        </button>
-                      )}
-
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                       {/* Delete / Revoke Button for HR */}
                       {role === 'hr' && item.status !== 'approved' && item.status !== 'revoked' && item.status !== 'deleted' && item.status !== 'rejected' && (
-                        <button
-                          type="button"
-                          className="history-delete-btn"
-                          onClick={() => {
-                            setItemToDelete(item)
-                            setDeleteError(null)
-                          }}
-                          disabled={isDeleting && itemToDelete?.uuid === item.uuid}
-                          title="Revoke this submission before broker locks it"
-                        >
-                          <TrashIcon size={13} />
-                          <span>Revoke</span>
-                        </button>
+                        <div className="broker-icon-btn-wrap">
+                          <button
+                            type="button"
+                            className="broker-icon-btn btn-reject"
+                            onClick={() => {
+                              setItemToDelete(item)
+                              setDeleteError(null)
+                            }}
+                            disabled={isDeleting && itemToDelete?.uuid === item.uuid}
+                            aria-label="Revoke submission"
+                          >
+                            <TrashIcon size={14} />
+                          </button>
+                          <div className="broker-tooltip tooltip-right">
+                            <span className="tooltip-title">Revoke</span>
+                            <span className="tooltip-desc">Revoke file before broker locks it</span>
+                          </div>
+                        </div>
                       )}
 
-                      {/* Compact Audit Trail Icon Button at Far Right */}
-                      <button
-                        type="button"
-                        className="action-btn-audit-icon"
-                        onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                        title="View Audit Trail"
-                        aria-label="View Audit Trail"
-                      >
-                        <ClockIcon size={14} />
-                      </button>
+                      {/* Download Action Button */}
+                      {item.status !== 'revoked' && item.status !== 'deleted' && (
+                        <div className="broker-icon-btn-wrap">
+                          <button
+                            type="button"
+                            className="broker-icon-btn btn-download"
+                            onClick={() => handleDownload(item)}
+                            disabled={downloadingUuid === item.uuid}
+                            aria-label="Download file"
+                          >
+                            {downloadingUuid === item.uuid ? (
+                              <RefreshCwIcon size={14} className="spin" />
+                            ) : (
+                              <DownloadIcon size={14} />
+                            )}
+                          </button>
+                          <div className="broker-tooltip tooltip-right">
+                            <span className="tooltip-title">Download</span>
+                            <span className="tooltip-desc">
+                              {item.status === 'rejected' ? 'Download file to inspect & fix issues' : 'Download original Excel file'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* History Icon Button */}
+                      <div className="broker-icon-btn-wrap">
+                        <button
+                          type="button"
+                          className="broker-icon-btn btn-audit"
+                          onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                          aria-label="View History"
+                        >
+                          <ClockIcon size={14} />
+                        </button>
+                        <div className="broker-tooltip tooltip-right">
+                          <span className="tooltip-title">History</span>
+                          <span className="tooltip-desc">Inspect lifecycle timeline & cycles</span>
+                        </div>
+                      </div>
                     </div>
                   </td>
                 </tr>

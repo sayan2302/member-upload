@@ -403,6 +403,31 @@ export function LockIcon({ className = "icon-svg", size = 14 }) {
   )
 }
 
+export function DownloadLockIcon({ className = "icon-svg", size = 15 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Open Padlock Shackle */}
+      <path d="M7 9V5a5 5 0 0 1 9.9-1" strokeWidth="2" />
+      {/* Lock Body Frame */}
+      <rect x="3" y="9" width="18" height="12" rx="2" strokeWidth="2" />
+      {/* Bold Arrow Passing Down Through Lock */}
+      <line x1="12" y1="5" x2="12" y2="17" strokeWidth="2.4" />
+      <polyline points="8 13 12 17 16 13" strokeWidth="2.4" />
+    </svg>
+  )
+}
+
 export function UnlockIcon({ className = "icon-svg", size = 14 }) {
   return (
     <svg

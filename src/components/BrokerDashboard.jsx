@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -8,6 +8,7 @@ import {
   ClockIcon,
   UploadCloudIcon,
   LockIcon,
+  DownloadLockIcon,
   UnlockIcon,
   InfoIcon,
   ChevronDownIcon,
@@ -43,6 +44,10 @@ export function BrokerDashboard({
   apiConfig,
   corporates = [],
   brokerId = '120',
+  corpId = '',
+  providerCorpId = '',
+  userEmail = '',
+  userName = '',
   onOpenUploadModal = () => {},
   onOpenAudit = () => {},
   refreshKey = 0,
@@ -77,6 +82,57 @@ export function BrokerDashboard({
   const [sortBy, setSortBy] = useState('date') // 'date' | 'name' | 'records'
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
 
+  const getUploaderInfo = useCallback((item) => {
+    const isBroker = (item?.uploaderRole || item?.templateType || (item?.role === 'broker' ? 'broker' : 'hr')).toLowerCase() === 'broker'
+
+    if (!item) {
+      return {
+        username: '—',
+        email: '—',
+        roleTag: isBroker ? 'Broker' : 'HR',
+      }
+    }
+
+    const rawName = (item.uploadedByName || item.uploadedBy || '').trim()
+    const isValidName = Boolean(
+      rawName &&
+      rawName.toLowerCase() !== 'system' &&
+      !rawName.toLowerCase().includes('system') &&
+      !rawName.toLowerCase().includes('hr.admin@') &&
+      rawName.toLowerCase() !== 'hr admin'
+    )
+
+    const rawEmail = (item.uploadedByEmail || '').trim()
+    const isValidEmail = Boolean(
+      rawEmail &&
+      rawEmail.toLowerCase() !== 'system' &&
+      !rawEmail.toLowerCase().includes('system') &&
+      rawEmail.includes('@') &&
+      !rawEmail.toLowerCase().includes('hr.admin@mayfair.com') &&
+      rawEmail.toLowerCase() !== 'hr@company.com'
+    )
+
+    let username = '—'
+    let email = isValidEmail ? rawEmail : '—'
+
+    // 1. Resolve Username
+    if (isValidName && !rawName.includes('@')) {
+      username = rawName
+    } else if (isValidEmail) {
+      const prefix = rawEmail.split('@')[0]
+      username = prefix
+        .split(/[._-]/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+    }
+
+    return {
+      username,
+      email,
+      roleTag: isBroker ? 'Broker' : 'HR',
+    }
+  }, [])
+
   const toggleCollapsed = () => {
     setIsCollapsed((prev) => {
       const next = !prev
@@ -101,13 +157,23 @@ export function BrokerDashboard({
     setIsLoading(true)
     setError('')
     try {
-      const validSubCorpIds = Array.isArray(corporates)
+      const clientCorpIds = Array.isArray(corporates)
         ? corporates.map((c) => c.id).filter((id) => id && id !== '0' && id !== 0)
         : []
+      
+      const brokerCorpIds = [corpId, providerCorpId]
+        .filter((id) => id && id !== '0' && id !== 0)
+
+      const allSubCorpIds = [...new Set([...clientCorpIds, ...brokerCorpIds])]
+
       const params = new URLSearchParams()
 
-      if (validSubCorpIds.length > 0) {
-        params.append('sub_corporate_ids', JSON.stringify(validSubCorpIds))
+      if (allSubCorpIds.length > 0) {
+        params.append('sub_corporate_ids', JSON.stringify(allSubCorpIds))
+      }
+
+      if (corpId || providerCorpId) {
+        params.append('corp_id', String(corpId || providerCorpId))
       }
 
       params.append('role', 'broker')
@@ -115,7 +181,10 @@ export function BrokerDashboard({
       const response = await fetch(
         `${apiConfig.apiBaseUrl}/uploads3/history?${params.toString()}`,
         {
-          headers: { 'x-api-key': apiConfig.apiKey },
+          headers: { 
+            'x-api-key': apiConfig.apiKey,
+            ...(userEmail ? { 'x-user-email': userEmail } : {}),
+          },
         }
       )
 
@@ -133,7 +202,7 @@ export function BrokerDashboard({
     } finally {
       setIsLoading(false)
     }
-  }, [apiConfig, corporates])
+  }, [apiConfig, corporates, corpId, providerCorpId, userEmail])
 
   const handleManualRefresh = async () => {
     setIsManualRefreshing(true)
@@ -157,6 +226,7 @@ export function BrokerDashboard({
         ...options.headers,
         'x-api-key': apiConfig.apiKey,
         'x-user-id': String(brokerId),
+        ...(userEmail ? { 'x-user-email': userEmail } : {}),
       }
     })
   }
@@ -320,13 +390,8 @@ export function BrokerDashboard({
             }
           }}
         >
-          <AlertTriangleIcon size={12} />
+          <MessageSquareIcon size={12} />
           <span>Rejected</span>
-          {rejectionDetails && (
-            <span className="status-note-icon-btn" title="View broker comments">
-              <MessageSquareIcon size={11} />
-            </span>
-          )}
         </span>
       )
     }
@@ -372,10 +437,10 @@ export function BrokerDashboard({
     return (
       <span 
         className="history-badge is-pending"
-        title="Pending Review: Uploaded by HR. Awaiting broker review and validation."
+        title="Pending: Uploaded by HR. Awaiting broker review and validation."
       >
         <ClockIcon size={12} />
-        <span>Pending Review</span>
+        <span>Pending</span>
       </span>
     )
   }
@@ -570,7 +635,6 @@ export function BrokerDashboard({
                   <tr>
                     <th className="col-file">File Name</th>
                     <th className="col-uploader">Uploaded By / On</th>
-                    <th className="col-records">Records</th>
                     <th className="col-status">
                       <div className="status-header-cell">
                         <span>Status</span>
@@ -589,7 +653,7 @@ export function BrokerDashboard({
                             <div className="status-popover-item">
                               <span className="status-dot dot-pending" />
                               <div className="status-popover-text">
-                                <div className="status-popover-label">Pending Review</div>
+                                <div className="status-popover-label">Pending</div>
                                 <div className="status-popover-desc">Uploaded by HR; awaiting broker review and validation.</div>
                               </div>
                             </div>
@@ -637,7 +701,84 @@ export function BrokerDashboard({
                         </div>
                       </div>
                     </th>
-                    <th className="col-actions">Actions</th>
+                    <th className="col-actions" style={{ minWidth: '220px', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                        <span>Actions</span>
+                        <div className="status-info-popover-wrapper">
+                          <button 
+                            type="button" 
+                            className="status-info-trigger" 
+                            aria-label="Action Buttons Lifecycle Guide"
+                            title="Click or hover to view action button guide"
+                          >
+                            <InfoIcon size={13} />
+                          </button>
+                          <div className="status-popover-card popover-right">
+                            <div className="status-popover-header">Action Buttons Guide</div>
+                            
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', flexShrink: 0 }}>
+                                <DownloadLockIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#0284c7' }}>Download & Lock</div>
+                                <div className="status-popover-desc">Claim lock & download Excel template for review.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#fef3c7', color: '#d97706', flexShrink: 0 }}>
+                                <UnlockIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#d97706' }}>Unlock File</div>
+                                <div className="status-popover-desc">Release lock to allow other brokers to review file.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#fee2e2', color: '#dc2626', flexShrink: 0 }}>
+                                <CloseIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#dc2626' }}>Reject Submission</div>
+                                <div className="status-popover-desc">Reject submission and send feedback comments to HR.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#f3e8ff', color: '#7e22ce', flexShrink: 0 }}>
+                                <UploadCloudIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#7e22ce' }}>Upload Revised File</div>
+                                <div className="status-popover-desc">Upload corrected Excel file on behalf of corporate HR.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#dcfce7', color: '#16a34a', flexShrink: 0 }}>
+                                <DownloadIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#16a34a' }}>Download File</div>
+                                <div className="status-popover-desc">Download submitted or approved Excel file.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', flexShrink: 0 }}>
+                                <ClockIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#0284c7' }}>File History</div>
+                                <div className="status-popover-desc">Inspect lifecycle timeline, logs, and process history.</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -654,153 +795,223 @@ export function BrokerDashboard({
                         <td className="history-file-cell">
                           <div className="history-file-info">
                             <ExcelFileIcon size={24} />
-                            <span 
-                              className="history-filename is-clickable" 
-                              onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                              title={`Click to view audit timeline: ${item.fileName}`}
-                              style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#cbd5e1' }}
-                            >
-                              {item.fileName}
-                            </span>
+                            <div className="history-file-text-wrap">
+                              <span className="history-filename" title={item.fileName}>
+                                {item.fileName}
+                              </span>
+                              <span className="history-file-records-badge" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
+                                {item.noOfRows ?? item.validRows ?? 0} records
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="history-date-cell">
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span 
-                              style={{ color: '#0f172a', fontWeight: 600, fontSize: '12px' }} 
-                              title={item.uploadedByEmail || item.uploadedBy || 'HR Admin'}
-                            >
-                              {item.uploadedByEmail && item.uploadedByEmail !== 'system' 
-                                ? item.uploadedByEmail 
-                                : (item.uploadedBy || 'hr.admin@mayfair.com')}
-                            </span>
-                            <span style={{ color: '#64748b', fontSize: '11px' }}>{formatDate(item.uploadedOn)}</span>
-                          </div>
-                        </td>
-                        <td className="history-rows-cell" style={{ whiteSpace: 'nowrap' }}>
-                          <span className="valid-count" title={`${item.noOfRows ?? item.validRows ?? 0} member records`}>
-                            {item.noOfRows ?? item.validRows ?? 0}
-                          </span>
+                          {(() => {
+                            const uploader = getUploaderInfo(item)
+                            return (
+                              <div className="broker-uploader-cell-wrap">
+                                <span className="broker-uploader-name">{uploader.username}</span>
+                                <span className="broker-uploader-email">{uploader.email}</span>
+                                <span className="broker-uploader-time">{formatDate(item.uploadedOn)}</span>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="history-status-cell" style={{ whiteSpace: 'nowrap' }}>
                           {getStatusBadge(item.status, item.lockedByUserId, item.rejectionDetails)}
                         </td>
-                        <td className="history-action-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                            {/* 1. If unlocked: Show Download & Lock AND Reject */}
-                            {!isRevoked && !isRejected && !isApproved && !isLocked && (
-                              <>
+                        <td className="history-action-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap', minWidth: '220px' }}>
+                          <div className="broker-actions-grid">
+                            {/* ── Slot 1: Upload Action (only when locked by me) ── */}
+                            <div className="broker-action-slot slot-upload">
+                              {!isRevoked && !isRejected && !isApproved && isLockedByMe && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-upload"
+                                    onClick={() => onOpenUploadModal(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Upload revised file"
+                                  >
+                                    <UploadCloudIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Upload</span>
+                                    <span className="tooltip-desc">Submit Revised Excel file</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ── Slot 2: Unlock Action (only when locked by me) ── */}
+                            <div className="broker-action-slot slot-unlock">
+                              {!isRevoked && !isRejected && !isApproved && isLockedByMe && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-unlock"
+                                    onClick={() => handleUnlockClick(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Unlock file"
+                                  >
+                                    <UnlockIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Unlock</span>
+                                    <span className="tooltip-desc">Allow other brokers to review file</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ── Slot 3: Reject Action (when unlocked or locked by me) ── */}
+                            <div className="broker-action-slot slot-reject">
+                              {!isRevoked && !isRejected && !isApproved && (isLockedByMe || !isLocked) && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-reject"
+                                    onClick={() => handleOpenRejectModal(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Reject submission"
+                                  >
+                                    <CloseIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Reject</span>
+                                    <span className="tooltip-desc">Reject file and send feedback to HR</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ── Slot 4: Download Action (Download, Download & Lock, or Locked) ── */}
+                            <div className="broker-action-slot slot-download">
+                              {!isRevoked && !isRejected && !isApproved && !isLocked && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-lock"
+                                    onClick={() => handleDownloadAndLock(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Download & Lock file"
+                                  >
+                                    <DownloadLockIcon size={15} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Download & Lock</span>
+                                    <span className="tooltip-desc">Claim lock & download template</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {!isRevoked && !isRejected && !isApproved && isLockedByMe && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-download"
+                                    onClick={() => handleDownload(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Download file"
+                                  >
+                                    <DownloadIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Download</span>
+                                    <span className="tooltip-desc">Download Submitted file</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {!isRevoked && !isRejected && !isApproved && isLockedByOther && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-locked-other"
+                                    disabled={true}
+                                    aria-label={`Locked by Broker ${item.lockedByUserId}`}
+                                  >
+                                    <LockIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Locked by Broker {item.lockedByUserId}</span>
+                                    <span className="tooltip-desc">Under active review by another broker</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {!isRevoked && !isRejected && isApproved && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-download"
+                                    onClick={() => handleDownload(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Download approved file"
+                                  >
+                                    <DownloadIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Download</span>
+                                    <span className="tooltip-desc">Download approved file</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {isRejected && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-download"
+                                    onClick={() => handleDownload(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Download rejected file"
+                                  >
+                                    <DownloadIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Download</span>
+                                    <span className="tooltip-desc">Download rejected file</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {isRevoked && (
+                                <div className="broker-icon-btn-wrap">
+                                  <button
+                                    type="button"
+                                    className="broker-icon-btn btn-download"
+                                    onClick={() => handleDownload(item)}
+                                    disabled={processingUuid === item.uuid}
+                                    aria-label="Download revoked file"
+                                  >
+                                    <DownloadIcon size={14} />
+                                  </button>
+                                  <div className="broker-tooltip">
+                                    <span className="tooltip-title">Download</span>
+                                    <span className="tooltip-desc">Download revoked file</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ── Slot 5: Audit Trail Icon Button ── */}
+                            <div className="broker-action-slot slot-audit">
+                              <div className="broker-icon-btn-wrap">
                                 <button
                                   type="button"
-                                  className="history-download-btn action-btn-lock"
-                                  onClick={() => handleDownloadAndLock(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Lock this file to yourself and download expanded broker template"
+                                  className="broker-icon-btn btn-audit"
+                                  onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
+                                  aria-label="View History"
                                 >
-                                  <LockIcon size={13} />
-                                  <span>{processingUuid === item.uuid ? 'Locking...' : 'Download & Lock'}</span>
+                                  <ClockIcon size={14} />
                                 </button>
-
-                                <button
-                                  type="button"
-                                  className="history-download-btn action-btn-reject"
-                                  onClick={() => handleOpenRejectModal(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Reject this submission and send feedback comments to HR"
-                                >
-                                  <CloseIcon size={13} />
-                                  <span>Reject</span>
-                                </button>
-                              </>
-                            )}
-
-                            {/* 2. If locked by me: Show Upload, Unlock, Download, AND Reject */}
-                            {!isRevoked && !isRejected && !isApproved && isLockedByMe && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="history-download-btn action-btn-upload"
-                                  onClick={() => onOpenUploadModal(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Upload revised file"
-                                >
-                                  <UploadCloudIcon size={13} />
-                                  <span>Upload</span>
-                                </button>
-                                
-                                <button
-                                  type="button"
-                                  className="history-download-btn action-btn-unlock"
-                                  onClick={() => handleUnlockClick(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Unlock file to allow others to review"
-                                >
-                                  <UnlockIcon size={13} />
-                                  <span>Unlock</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="history-download-btn action-btn-download"
-                                  onClick={() => handleDownload(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Download file"
-                                >
-                                  <DownloadIcon size={13} />
-                                  <span>Download</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="history-download-btn action-btn-reject"
-                                  onClick={() => handleOpenRejectModal(item)}
-                                  disabled={processingUuid === item.uuid}
-                                  title="Reject this submission and send feedback comments to HR"
-                                >
-                                  <CloseIcon size={13} />
-                                  <span>Reject</span>
-                                </button>
-                              </>
-                            )}
-
-                            {/* 3. If locked by another broker: Show disabled Locked state ONLY (No Reject allowed) */}
-                            {!isRevoked && !isRejected && !isApproved && isLockedByOther && (
-                              <button
-                                type="button"
-                                className="history-download-btn action-btn-download"
-                                disabled={true}
-                                title={`File is currently locked by User ${item.lockedByUserId}. You cannot edit or reject files locked by another broker.`}
-                              >
-                                <LockIcon size={13} />
-                                <span>Locked</span>
-                              </button>
-                            )}
-
-                            {/* 4. If approved: Show Download only */}
-                            {!isRevoked && !isRejected && isApproved && (
-                              <button
-                                type="button"
-                                className="history-download-btn action-btn-download"
-                                onClick={() => handleDownload(item)}
-                                disabled={processingUuid === item.uuid}
-                                title="Download file"
-                              >
-                                <DownloadIcon size={13} />
-                                <span>Download</span>
-                              </button>
-                            )}
-
-                            {/* Compact Audit Trail Icon Button at Far Right */}
-                            <button
-                              type="button"
-                              className="action-btn-audit-icon"
-                              onClick={() => onOpenAudit && onOpenAudit(item.uuid)}
-                              title="View Audit Trail"
-                              aria-label="View Audit Trail"
-                            >
-                              <ClockIcon size={14} />
-                            </button>
-
+                                <div className="broker-tooltip">
+                                  <span className="tooltip-title">History</span>
+                                  <span className="tooltip-desc">Inspect lifecycle timeline & cycles</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -896,7 +1107,7 @@ export function BrokerDashboard({
                 </div>
                 <div className="delete-file-row">
                   <span className="df-label">Uploaded By:</span>
-                  <span className="df-val">{itemToReject.uploadedByEmail || 'HR Admin'}</span>
+                  <span className="df-val">{getUploaderInfo(itemToReject).username} ({getUploaderInfo(itemToReject).email})</span>
                 </div>
               </div>
 
