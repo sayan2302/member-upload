@@ -82,7 +82,7 @@ export function CorporateListCard({ corporates = [], role = 'hr' }) {
               <input
                 type="text"
                 className="corporate-search-input"
-                placeholder="Search company by name or ID…"
+                placeholder="Search company by name…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -96,7 +96,6 @@ export function CorporateListCard({ corporates = [], role = 'hr' }) {
                 <div key={corp.id} className="corporate-item">
                   <div className="corporate-info">
                     <span className="corporate-name">{corp.name}</span>
-                    <span className="corporate-id-badge">ID: {corp.id}</span>
                   </div>
                   <button
                     type="button"

@@ -30,6 +30,7 @@ export function UploadHistory({
   onOpenAudit,
 }) {
   const [historyItems, setHistoryItems] = useState([])
+  const [totalServerCount, setTotalServerCount] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -115,6 +116,8 @@ export function UploadHistory({
       }
 
       params.append('role', role)
+      params.append('limit', '500')
+      params.append('max_results', '500')
 
       const response = await fetch(
         `${apiConfig.apiBaseUrl}/uploads3/history?${params.toString()}`,
@@ -136,6 +139,8 @@ export function UploadHistory({
         : Array.isArray(data)
         ? data
         : []
+      const serverCount = data.total ?? data.total_count ?? data.totalCount ?? data.count ?? data.total_files
+      setTotalServerCount(typeof serverCount === 'number' ? serverCount : null)
       setHistoryItems(items)
     } catch (err) {
       console.error('[UploadHistory] Fetch error:', err)
@@ -353,7 +358,11 @@ export function UploadHistory({
         <div>
           <h3 className="history-title">
             Upload History
-            <span className="history-count-badge">{filteredItems.length}</span>
+            <span className="history-count-badge">
+              {Boolean(searchQuery.trim() || statusFilter !== 'all' || startDate || endDate)
+                ? filteredItems.length
+                : (totalServerCount !== null && totalServerCount > historyItems.length ? totalServerCount : historyItems.length)}
+            </span>
           </h3>
           <p className="history-subtitle">
             View and download previously submitted enrollment spreadsheets.

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ClockIcon,
   CheckCircleIcon,
@@ -23,6 +24,12 @@ import {
   TableIcon,
   SparklesIcon,
   DatabaseIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  BuildingIcon,
+  RefreshCwIcon,
+  LayersIcon,
+  FilterErrorIcon,
 } from './Icons.jsx'
 import { parseExcelWorkbook } from '../utils/excelParser.js'
 
@@ -225,6 +232,26 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
   const [expandedCycles, setExpandedCycles] = useState({})
   const [errorsOnly, setErrorsOnly] = useState(false)
   const [copyToast, setCopyToast] = useState(null)
+  const [isInspectorFullscreen, setIsInspectorFullscreen] = useState(false)
+
+  // Escape key handler and body overflow lock to exit inspector fullscreen
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && isInspectorFullscreen) {
+        setIsInspectorFullscreen(false)
+      }
+    }
+    if (isInspectorFullscreen) {
+      document.body.style.overflow = 'hidden'
+      window.addEventListener('keydown', handleKeyDown)
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isInspectorFullscreen])
 
   // Fetch audit timeline and base file worksheet from S3
   useEffect(() => {
@@ -475,37 +502,15 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
       )}
 
       {/* ── Fixed Top Command Bar ────────────────────────────────────────── */}
-      <header className="audit-header-bar">
+      <div className="audit-header-bar" style={{ marginBottom: '24px' }}>
         <div className="audit-header-left">
-          <button type="button" className="audit-back-btn" onClick={onBack} title="Return to Dashboard">
-            <ChevronLeftIcon size={14} />
-            <span>Back to Dashboard</span>
-          </button>
           <div className="audit-file-headline">
-            <div className="audit-file-icon-wrap">
+            <div className="audit-file-icon-wrap" title="Excel Document">
               <ExcelFileIcon size={20} />
             </div>
             <h1 className="audit-file-name" title={fileInfo.file_name}>
               {fileInfo.file_name || 'File Timeline'}
             </h1>
-            <button
-              type="button"
-              className={`audit-uuid-pill ${copyToast ? 'is-copied' : ''}`}
-              onClick={() => copyToClipboard(fileInfo.uuid, 'File UUID')}
-              title="Click to copy full UUID to clipboard"
-            >
-              {copyToast ? (
-                <>
-                  <CheckIcon size={12} className="copy-check-icon" />
-                  <span className="copy-success-text">Copied UUID!</span>
-                </>
-              ) : (
-                <>
-                  <span>UUID: {fileInfo.uuid ? fileInfo.uuid.substring(0, 13) + '…' : ''}</span>
-                  <CopyIcon size={12} />
-                </>
-              )}
-            </button>
             <span className={`audit-status-badge is-${(fileInfo.status || 'pending').toLowerCase()}`}>
               <span className="status-pulsing-dot" />
               <span>{fileInfo.status ? fileInfo.status.toUpperCase() : 'PENDING'}</span>
@@ -514,23 +519,26 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
         </div>
 
         <div className="audit-header-meta">
-          <div className="audit-meta-stat">
+          <div className="audit-meta-stat" title="Corporate ID">
+            <BuildingIcon size={13} className="meta-stat-icon" />
             <span className="meta-stat-label">Corporate ID</span>
             <span className="meta-stat-val">{fileInfo.corp_id || 'N/A'}</span>
           </div>
-          <div className="audit-meta-stat">
+          <div className="audit-meta-stat" title="Upload Cycles">
+            <RefreshCwIcon size={13} className="meta-stat-icon" />
             <span className="meta-stat-label">Cycles</span>
             <span className="meta-stat-val">{summary.total_cycles || 0}</span>
           </div>
-          <div className="audit-meta-stat">
+          <div className="audit-meta-stat" title="Milestone Events">
+            <LayersIcon size={13} className="meta-stat-icon" />
             <span className="meta-stat-label">Milestones</span>
             <span className="meta-stat-val">{summary.total_sub_transactions || 0}</span>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* ── Main Split Console View ──────────────────────────────────────── */}
-      <div className="audit-console-body">
+      <div className="audit-console-body" style={{ marginTop: '24px' }}>
         {/* ── Left Sidebar: Chronological Cycle Stepper ─────────── */}
         <aside className="audit-timeline-col no-print">
           {/* Cycles Accordion List */}
@@ -554,20 +562,16 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     {/* Cycle Card Header */}
                     <div className="cycle-card-header" onClick={() => toggleCycle(cycle.cycle_id)}>
                       <div className="cycle-header-top">
-                        <div className="cycle-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className="cycle-title-count" style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                        <div className="cycle-title-group">
+                          <span className="cycle-title-text">
                             Cycle {cycle.cycle_seq || cIdx + 1}
+                          </span>
+                          <span className="cycle-time-badge">
+                            {formatAuditTimestamp(cycle.started_at, { includeSeconds: false })}
                           </span>
                         </div>
                         <span className="cycle-toggle-icon">
-                          {isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
-                        </span>
-                      </div>
-
-                      <div className="cycle-meta-row" style={{ marginTop: '4px' }}>
-                        <span className="cycle-date-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b' }}>
-                          <ClockIcon size={11} />
-                          <span>{formatAuditTimestamp(cycle.started_at, { includeSeconds: false })}</span>
+                          {isExpanded ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
                         </span>
                       </div>
                     </div>
@@ -598,12 +602,6 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                                   </span>
                                 </div>
                                 <div className="substep-title">{sub.action_title || sub.action_code}</div>
-                                {hasErrors && (
-                                  <div className="substep-error-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <AlertTriangleIcon size={11} />
-                                    <span>{sub.bypassed_errors_count || sub.worksheet_snapshot?.rejectedRows} error(s) flagged</span>
-                                  </div>
-                                )}
                                 {isSubCancelled && (
                                   <div className="substep-cancel-hint">
                                     Session discarded before commit
@@ -624,169 +622,199 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
 
         {/* ── Right Inspector: Deep Time-Travel Preview ──────────────────── */}
         <section className="audit-inspector-col">
-          {activeTx ? (
-            <div className="inspector-panel">
-              {/* Event Context Header */}
-              <div className="inspector-event-header">
-                <div className="event-title-group">
-                  <div className="event-breadcrumb-strip">
-                    <span className="breadcrumb-tag">Cycle {activeTx.cycle_seq || activeTx.parentCycle?.cycle_seq || 1}</span>
-                    <span className="breadcrumb-dot">•</span>
-                    <span className="breadcrumb-tag is-step">Step {activeTx.sub_seq || '1.1'}</span>
-                  </div>
-                  <h2 className="event-main-title">{activeTx.action_title || activeTx.action_code}</h2>
-                  <div className="event-action-code-row">
-                    <span className="event-code-badge">action_code: {activeTx.action_code}</span>
-                  </div>
+          {(() => {
+            if (!activeTx) {
+              return (
+                <div className="inspector-placeholder">
+                  <ClockIcon size={48} />
+                  <h3>Select a transaction from the timeline</h3>
+                  <p>Choose any cycle or sub-transaction on the left to inspect its historical state.</p>
                 </div>
+              )
+            }
 
-                {(() => {
-                  const actor = getActorIdentity(activeTx.actor || activeTx.parentCycle?.actor, fileInfo)
-                  return (
-                    <div className="event-actor-card">
-                      <div className="actor-avatar-badge">
-                        {actor.role === 'BROKER' ? 'BR' : 'HR'}
-                      </div>
-                      <div className="actor-info">
-                        <div className="actor-name-row">
-                          <span className="actor-name">{actor.name}</span>
-                          <span className={`actor-role-pill is-${actor.role.toLowerCase()}`}>
-                            {actor.role}
+            const inspectorNode = (
+              <div className={`inspector-panel ${isInspectorFullscreen ? 'is-fullscreen' : ''}`}>
+                {/* Event Context Header */}
+                <div className="inspector-event-header">
+                  <div className="event-title-group">
+                    <div className="event-breadcrumb-strip">
+                      <span className="breadcrumb-tag">Cycle {activeTx.cycle_seq || activeTx.parentCycle?.cycle_seq || 1}</span>
+                      <span className="breadcrumb-dot">•</span>
+                      <span className="breadcrumb-tag is-step">Step {activeTx.sub_seq || '1.1'}</span>
+                    </div>
+                    <h2 className="event-main-title">{activeTx.action_title || activeTx.action_code}</h2>
+                    <div className="event-action-code-row">
+                      <span className="event-code-badge">action_code: {activeTx.action_code}</span>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const actor = getActorIdentity(activeTx.actor || activeTx.parentCycle?.actor, fileInfo)
+                    return (
+                      <div className="event-actor-card">
+                        <div className="actor-avatar-badge">
+                          {actor.role === 'BROKER' ? 'BR' : 'HR'}
+                        </div>
+                        <div className="actor-info">
+                          <div className="actor-name-row">
+                            <span className="actor-name">{actor.name}</span>
+                            <span className={`actor-role-pill is-${actor.role.toLowerCase()}`}>
+                              {actor.role}
+                            </span>
+                          </div>
+                          {actor.email && (
+                            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>
+                              {actor.email}
+                            </div>
+                          )}
+                          <span className="actor-time" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <ClockIcon size={11} />
+                            <span>{new Date(activeTx.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
                           </span>
                         </div>
-                        {actor.email && (
-                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>
-                            {actor.email}
-                          </div>
-                        )}
-                        <span className="actor-time" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          <ClockIcon size={11} />
-                          <span>{new Date(activeTx.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
-                        </span>
                       </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Special Context Banners */}
+                {activeTx.rejection_comments && (
+                  <div className="audit-callout-box is-rejection">
+                    <div className="callout-icon"><MessageSquareIcon size={16} /></div>
+                    <div className="callout-body">
+                      <strong>Broker Rejection Feedback Note:</strong>
+                      <p className="rejection-quote">"{activeTx.rejection_comments}"</p>
+                      {activeTx.rejection_reason && (
+                        <span className="rejection-tag">Reason: {activeTx.rejection_reason}</span>
+                      )}
                     </div>
-                  )
-                })()}
-              </div>
-
-              {/* Special Context Banners */}
-              {activeTx.rejection_comments && (
-                <div className="audit-callout-box is-rejection">
-                  <div className="callout-icon"><MessageSquareIcon size={16} /></div>
-                  <div className="callout-body">
-                    <strong>Broker Rejection Feedback Note:</strong>
-                    <p className="rejection-quote">"{activeTx.rejection_comments}"</p>
-                    {activeTx.rejection_reason && (
-                      <span className="rejection-tag">Reason: {activeTx.rejection_reason}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {activeTx.is_cancelled && (
-                <div className="audit-callout-box is-cancelled">
-                  <div className="callout-icon"><AlertTriangleIcon size={16} /></div>
-                  <div className="callout-body">
-                    <strong>Session Cancelled / Discarded:</strong>
-                    <p>The user initiated this session but chose to cancel without committing changes to the database. All exploratory validation states are captured here for complete audit compliance and traceability.</p>
-                  </div>
-                </div>
-              )}
-
-              {activeTx.action_code === 'FORCE_APPROVED_WITH_ERRORS' && (
-                <div className="audit-callout-box is-force">
-                  <div className="callout-icon"><ZapIcon size={16} /></div>
-                  <div className="callout-body">
-                    <strong>Force Ingestion Executed:</strong>
-                    <p>Broker bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Legacy Milestone Notice for Historical Records */}
-              {isLegacyRecordWithoutSnapshot && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  marginBottom: '14px',
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#475569',
-                  lineHeight: '1.4'
-                }}>
-                  <InfoIcon size={18} style={{ color: '#0284c7', flexShrink: 0 }} />
-                  <div>
-                    <strong>Legacy Milestone Summary:</strong> This transaction recorded <strong>{displayFaultyRows} bypassed error(s)</strong> prior to granular row snapshot persistence. The original file data is rendered below.
-                  </div>
-                </div>
-              )}
-
-              {/* Action Toolbar for Worksheet Snapshot */}
-              <div className="inspector-worksheet-toolbar">
-                <div className="toolbar-stats-strip">
-                  <span className="sheet-stat-chip">
-                    <TableIcon size={12} />
-                    <span>Total Rows: {displayTotalRows}</span>
-                  </span>
-                  <span className="sheet-stat-chip is-clean">
-                    <CheckCircleIcon size={12} style={{ color: '#059669' }} />
-                    <span>Clean Rows: {displayCleanRows}</span>
-                  </span>
-                  <span className={`sheet-stat-chip ${displayFaultyRows > 0 ? 'is-faulty' : ''}`}>
-                    <AlertTriangleIcon size={12} style={{ color: displayFaultyRows > 0 ? '#dc2626' : 'currentColor' }} />
-                    <span>Faulty Rows: {displayFaultyRows}</span>
-                  </span>
-                </div>
-
-                <div className="toolbar-actions-strip">
-                  <button
-                    type="button"
-                    className={`toolbar-btn ${errorsOnly ? 'is-active' : ''}`}
-                    onClick={() => setErrorsOnly(!errorsOnly)}
-                  >
-                    <FilterIcon size={14} />
-                    <span>{errorsOnly ? 'Showing Faulty Rows Only' : 'Filter Faulty Only'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Historical Worksheet Snapshot Preview */}
-              <div className="inspector-sheet-wrapper">
-
-                {effectiveSnapshot && Array.isArray(effectiveSnapshot.rows) && effectiveSnapshot.rows.length > 0 ? (
-                  <HistoricalWorksheetTable
-                    rows={effectiveSnapshot.rows}
-                    errorsOnly={errorsOnly}
-                    isLegacy={isLegacyRecordWithoutSnapshot}
-                    bypassedCount={displayFaultyRows}
-                    baseHeaders={baseWorksheet?.headers}
-                    baseRows={baseWorksheet?.rows}
-                  />
-                ) : sheetLoading ? (
-                  <div className="audit-loading-container" style={{ padding: '40px', minHeight: 'auto' }}>
-                    <div className="audit-spinner" />
-                    <p style={{ marginTop: '12px', color: '#64748b' }}>Reconstructing interactive worksheet...</p>
-                  </div>
-                ) : (
-                  <div className="historical-table-empty" style={{ padding: '36px' }}>
-                    No worksheet rows available for this file.
                   </div>
                 )}
-              </div>
 
-              {/* End of Inspector Panel */}
-            </div>
-          ) : (
-            <div className="inspector-placeholder">
-              <ClockIcon size={48} />
-              <h3>Select a transaction from the timeline</h3>
-              <p>Choose any cycle or sub-transaction on the left to inspect its historical state.</p>
-            </div>
-          )}
+                {activeTx.is_cancelled && (
+                  <div className="audit-callout-box is-cancelled">
+                    <div className="callout-icon"><AlertTriangleIcon size={16} /></div>
+                    <div className="callout-body">
+                      <strong>Session Cancelled / Discarded:</strong>
+                      <p>The user initiated this session but chose to cancel without committing changes to the database. All exploratory validation states are captured here for complete audit compliance and traceability.</p>
+                    </div>
+                  </div>
+                )}
+
+                {activeTx.action_code === 'FORCE_APPROVED_WITH_ERRORS' && (
+                  <div className="audit-callout-box is-force">
+                    <div className="callout-icon"><ZapIcon size={16} /></div>
+                    <div className="callout-body">
+                      <strong>Force Ingestion Executed:</strong>
+                      <p>Broker bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Legacy Milestone Notice for Historical Records */}
+                {isLegacyRecordWithoutSnapshot && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    marginBottom: '14px',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#475569',
+                    lineHeight: '1.4'
+                  }}>
+                    <InfoIcon size={18} style={{ color: '#0284c7', flexShrink: 0 }} />
+                    <div>
+                      <strong>Legacy Milestone Summary:</strong> This transaction recorded <strong>{displayFaultyRows} bypassed error(s)</strong> prior to granular row snapshot persistence. The original file data is rendered below.
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Toolbar for Worksheet Snapshot */}
+                <div className="inspector-worksheet-toolbar">
+                  <div className="toolbar-stats-strip">
+                    <span className="sheet-stat-chip">
+                      <TableIcon size={12} />
+                      <span>Total Rows: {displayTotalRows}</span>
+                    </span>
+                    <span className="sheet-stat-chip is-clean">
+                      <CheckCircleIcon size={12} style={{ color: '#059669' }} />
+                      <span>Clean Rows: {displayCleanRows}</span>
+                    </span>
+                    <span className={`sheet-stat-chip ${displayFaultyRows > 0 ? 'is-faulty' : ''}`}>
+                      <AlertTriangleIcon size={12} style={{ color: displayFaultyRows > 0 ? '#dc2626' : 'currentColor' }} />
+                      <span>Faulty Rows: {displayFaultyRows}</span>
+                    </span>
+                  </div>
+
+                  <div className="toolbar-actions-strip">
+                    <div className="broker-icon-btn-wrap">
+                      <button
+                        type="button"
+                        className={`toolbar-btn ${errorsOnly ? 'is-active' : ''}`}
+                        onClick={() => setErrorsOnly(!errorsOnly)}
+                        aria-label={errorsOnly ? 'Showing Faulty Rows Only' : 'Filter Faulty Rows Only'}
+                      >
+                        <AlertTriangleIcon size={14} style={{ color: errorsOnly ? '#ffffff' : '#dc2626' }} />
+                      </button>
+                      <div className="broker-tooltip">
+                        <span className="tooltip-title">{errorsOnly ? 'Show All Rows' : 'Filter Faulty Only'}</span>
+                        <span className="tooltip-desc">{errorsOnly ? 'Display all member records' : 'Display only rows with validation errors'}</span>
+                      </div>
+                    </div>
+
+                    <div className="broker-icon-btn-wrap">
+                      <button
+                        type="button"
+                        className={`toolbar-btn ${isInspectorFullscreen ? 'is-active' : ''}`}
+                        onClick={() => setIsInspectorFullscreen(!isInspectorFullscreen)}
+                        aria-label={isInspectorFullscreen ? 'Exit Fullscreen' : 'Maximize Fullscreen'}
+                      >
+                        {isInspectorFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+                      </button>
+                      <div className="broker-tooltip">
+                        <span className="tooltip-title">{isInspectorFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+                        <span className="tooltip-desc">{isInspectorFullscreen ? 'Return to normal view (Esc)' : 'Expand worksheet to full screen'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Historical Worksheet Snapshot Preview */}
+                <div className="inspector-sheet-wrapper">
+                  {effectiveSnapshot && Array.isArray(effectiveSnapshot.rows) && effectiveSnapshot.rows.length > 0 ? (
+                    <HistoricalWorksheetTable
+                      rows={effectiveSnapshot.rows}
+                      errorsOnly={errorsOnly}
+                      isLegacy={isLegacyRecordWithoutSnapshot}
+                      bypassedCount={displayFaultyRows}
+                      baseHeaders={baseWorksheet?.headers}
+                      baseRows={baseWorksheet?.rows}
+                    />
+                  ) : sheetLoading ? (
+                    <div className="audit-loading-container" style={{ padding: '40px', minHeight: 'auto' }}>
+                      <div className="audit-spinner" />
+                      <p style={{ marginTop: '12px', color: '#64748b' }}>Reconstructing interactive worksheet...</p>
+                    </div>
+                  ) : (
+                    <div className="historical-table-empty" style={{ padding: '36px' }}>
+                      No worksheet rows available for this file.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+
+            if (isInspectorFullscreen && typeof document !== 'undefined') {
+              return createPortal(inspectorNode, document.body)
+            }
+
+            return inspectorNode
+          })()}
         </section>
       </div>
     </main>

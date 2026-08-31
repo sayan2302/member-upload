@@ -97,6 +97,7 @@ export function ValidationWorksheet({
   })
 
   const toggleCollapsed = () => {
+    if (isFullscreen) return
     setIsCollapsed((prev) => {
       const next = !prev
       try {
@@ -263,16 +264,19 @@ export function ValidationWorksheet({
         <div>
           <button
             type="button"
-            className="history-title-toggle"
+            className={`history-title-toggle ${isFullscreen ? 'is-fullscreen-header-title' : ''}`}
             onClick={toggleCollapsed}
             aria-expanded={!isCollapsed}
-            title={isCollapsed ? "Click to expand worksheet preview" : "Click to collapse worksheet preview"}
+            disabled={isFullscreen}
+            title={isFullscreen ? undefined : (isCollapsed ? "Click to expand worksheet preview" : "Click to collapse worksheet preview")}
           >
             <span className="history-title-text">Interactive Worksheet Preview</span>
             <span className="history-count-badge">{totalCount}</span>
-            <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
-              <ChevronDownIcon size={16} />
-            </span>
+            {!isFullscreen && (
+              <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
+                <ChevronDownIcon size={16} />
+              </span>
+            )}
           </button>
         </div>
         <div className={`validation-header-controls ${isCollapsed && !isFullscreen ? 'is-hidden-actions' : ''}`}>
@@ -310,16 +314,20 @@ export function ValidationWorksheet({
           </label>
 
           {/* Fullscreen Button */}
-          <button
-            type="button"
-            className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand to Fullscreen"}
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
-          >
-            {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
-            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-          </button>
+          <div className="broker-icon-btn-wrap">
+            <button
+              type="button"
+              className={`worksheet-fullscreen-btn ${isFullscreen ? 'is-active-btn' : ''}`}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+            >
+              {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+            </button>
+            <div className="broker-tooltip">
+              <span className="tooltip-title">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+              <span className="tooltip-desc">{isFullscreen ? 'Return to normal view (Esc)' : 'Expand worksheet preview to full screen'}</span>
+            </div>
+          </div>
         </div>
       </div>
 

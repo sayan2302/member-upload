@@ -54,6 +54,7 @@ export function BrokerDashboard({
   hasValidationErrors = false,
 }) {
   const [historyItems, setHistoryItems] = useState([])
+  const [totalServerCount, setTotalServerCount] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -177,6 +178,8 @@ export function BrokerDashboard({
       }
 
       params.append('role', 'broker')
+      params.append('limit', '500')
+      params.append('max_results', '500')
 
       const response = await fetch(
         `${apiConfig.apiBaseUrl}/uploads3/history?${params.toString()}`,
@@ -194,7 +197,15 @@ export function BrokerDashboard({
       }
 
       const data = await response.json()
-      const items = Array.isArray(data.files) ? data.files : []
+      const items = Array.isArray(data.files)
+        ? data.files
+        : Array.isArray(data.items)
+        ? data.items
+        : Array.isArray(data)
+        ? data
+        : []
+      const serverCount = data.total ?? data.total_count ?? data.totalCount ?? data.count ?? data.total_files
+      setTotalServerCount(typeof serverCount === 'number' ? serverCount : null)
       setHistoryItems(items)
     } catch (err) {
       console.error('[BrokerDashboard] Fetch error:', err)
@@ -537,7 +548,11 @@ export function BrokerDashboard({
             title={isCollapsed ? "Click to expand submissions" : "Click to collapse submissions"}
           >
             <span className="history-title-text">File Submissions</span>
-            <span className="history-count-badge">{filteredItems.length}</span>
+            <span className="history-count-badge">
+              {Boolean(searchQuery.trim() || statusFilter !== 'all' || startDate || endDate)
+                ? filteredItems.length
+                : (totalServerCount !== null && totalServerCount > historyItems.length ? totalServerCount : historyItems.length)}
+            </span>
             <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
               <ChevronDownIcon size={16} />
             </span>

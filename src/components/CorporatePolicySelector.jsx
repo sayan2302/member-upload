@@ -246,7 +246,6 @@ export function CorporatePolicySelector({
                         <span className="corp-title" title={corp.name}>
                           {corp.name}
                         </span>
-                        <span className="corp-id-pill">ID: {corp.id}</span>
                       </div>
                     </div>
 
