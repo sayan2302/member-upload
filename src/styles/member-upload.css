@@ -647,11 +647,11 @@ button {
 .success-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 2147483647 !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   padding: 16px;
@@ -2417,6 +2417,14 @@ button {
   background: #ef4444;
 }
 
+.status-dot-mini.dot-rejected {
+  background: #e11d48;
+}
+
+.status-dot-mini.dot-revoked {
+  background: #64748b;
+}
+
 .history-sort-trigger-btn {
   display: inline-flex;
   align-items: center;
@@ -3171,12 +3179,14 @@ button {
   box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
 }
 
-.broker-icon-btn.btn-lock {
+.broker-icon-btn.btn-lock,
+.broker-icon-btn.btn-download-lock {
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
   color: #059669;
 }
-.broker-icon-btn.btn-lock:hover:not(:disabled) {
+.broker-icon-btn.btn-lock:hover:not(:disabled),
+.broker-icon-btn.btn-download-lock:hover:not(:disabled) {
   background: #059669;
   border-color: #047857;
   color: #ffffff;
@@ -5404,7 +5414,8 @@ button {
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 9999;
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 2147483647 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5869,7 +5880,19 @@ button {
   padding: 16px 20px;
   transition: all 0.2s ease;
   position: relative;
-  z-index: 1;
+  z-index: 10;
+}
+
+.corporate-container-card.is-dropdown-active,
+.corporate-container-card:has(.is-dropdown-active),
+.corporate-container-card:has(.policy-dropdown-popover-menu) {
+  z-index: 1000 !important;
+  position: relative;
+}
+
+.corporate-container-card .history-collapsible-wrapper.is-expanded,
+.corporate-container-card .history-collapsible-wrapper.is-expanded .history-collapsible-inner {
+  overflow: visible !important;
 }
 
 .corporate-search-inline {
@@ -5940,7 +5963,7 @@ button {
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
   position: relative;
   z-index: 1;
 }
@@ -5950,6 +5973,19 @@ button {
   border-color: #cbd5e1;
   box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.09);
   z-index: 50;
+}
+
+.corporate-policy-card.is-dropdown-active,
+.corporate-policy-card:has(.policy-dropdown-popover-menu) {
+  z-index: 1001 !important;
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12);
+}
+
+.corporate-policy-card.is-dropdown-active .corp-card-bottom,
+.corporate-policy-card.is-dropdown-active .policy-control-group {
+  position: relative;
+  z-index: 1002 !important;
 }
 
 /* ── Top Row: Identity & Copy Name ── */
@@ -6211,7 +6247,7 @@ button {
   border: 1px solid #cbd5e1;
   border-radius: 12px;
   box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 8px 12px -4px rgba(15, 23, 42, 0.08);
-  z-index: 1000;
+  z-index: 99999 !important;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -6343,23 +6379,43 @@ button {
 .row-copy-btn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 22px;
-  padding: 0 8px;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  color: #475569;
-  border-radius: 4px;
-  font-size: 10.5px;
+  color: #334155;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .row-copy-btn:hover {
   background: #eff6ff;
   border-color: #93c5fd;
   color: #1d4ed8;
+}
+
+.popover-policy-row.is-selected .row-copy-btn {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.popover-policy-row.is-selected .row-copy-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.row-copy-btn.is-copied,
+.popover-policy-row.is-selected .row-copy-btn.is-copied {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #059669 !important;
 }
 
 .status-badge.is-selected {
@@ -6409,7 +6465,7 @@ button {
   align-items: center;
   gap: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12);
-  z-index: 99999;
+  z-index: 2147483647 !important;
   pointer-events: none;
   animation: copyToastPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }

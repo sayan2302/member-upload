@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -132,8 +133,8 @@ export function UploadHistory({
   const [deleteSuccessToast, setDeleteSuccessToast] = useState(null)
   const [activeFeedbackItem, setActiveFeedbackItem] = useState(null)
 
-  const fetchHistory = useCallback(async () => {
-    setIsLoading(true)
+  const fetchHistory = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true)
     setError('')
     try {
       const validSubCorpIds = Array.isArray(corporates)
@@ -178,7 +179,7 @@ export function UploadHistory({
       console.error('[UploadHistory] Fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load upload history')
     } finally {
-      setIsLoading(false)
+      if (!isSilent) setIsLoading(false)
     }
   }, [apiConfig, corpId, corporates, role])
 
@@ -217,9 +218,12 @@ export function UploadHistory({
     setIsDeleting(true)
     setDeleteError(null)
 
+    const deletedUuid = itemToDelete.uuid
+    const deletedName = itemToDelete.fileName
+
     try {
       const response = await fetch(
-        `${apiConfig.apiBaseUrl}/uploads3/${itemToDelete.uuid}`,
+        `${apiConfig.apiBaseUrl}/uploads3/${deletedUuid}`,
         {
           method: 'DELETE',
           headers: {
@@ -242,12 +246,12 @@ export function UploadHistory({
         throw new Error(data.error || `Failed to delete file (${response.status})`)
       }
 
-      // Success
-      const deletedName = itemToDelete.fileName
+      // Success - optimistically remove row
+      setHistoryItems((prev) => prev.filter((it) => it.uuid !== deletedUuid))
       setItemToDelete(null)
       setDeleteSuccessToast(`Submission "${deletedName}" was successfully removed.`)
       setTimeout(() => setDeleteSuccessToast(null), 4500)
-      fetchHistory()
+      fetchHistory(true)
     } catch (err) {
       console.error('[UploadHistory] Delete error:', err)
       setDeleteError(err instanceof Error ? err.message : 'Could not delete the file.')
@@ -255,6 +259,29 @@ export function UploadHistory({
       setIsDeleting(false)
     }
   }
+
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(activeFeedbackItem || itemToDelete);
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          if (!isDeleting) {
+            setItemToDelete(null);
+            setDeleteError(null);
+          }
+          setActiveFeedbackItem(null);
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [activeFeedbackItem, itemToDelete, isDeleting]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—'
@@ -282,7 +309,18 @@ export function UploadHistory({
         </span>
       )
     }
-    if (s === 'rejected' || s === 'failed') {
+    if (s === 'failed') {
+      return (
+        <span 
+          className="history-badge is-failed"
+          title="Validation or processing failed"
+        >
+          <CloseIcon size={12} />
+          <span>Failed</span>
+        </span>
+      )
+    }
+    if (s === 'rejected') {
       return (
         <span 
           className={`history-badge is-rejected ${item.rejectionDetails ? 'has-feedback-trigger' : ''}`}
@@ -300,6 +338,19 @@ export function UploadHistory({
         <span className="history-badge is-revoked" title="Revoked by HR: This file submission was revoked and cannot be downloaded.">
           <CloseIcon size={12} />
           <span>Revoked</span>
+        </span>
+      )
+    }
+    const isLocked = Boolean(item && (item.isLocked || item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by))
+    if (role === 'broker' && isLocked) {
+      return (
+        <span 
+          className="history-badge is-pending" 
+          style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}
+          title="Locked: Under active broker review"
+        >
+          <LockIcon size={12} />
+          <span>Locked</span>
         </span>
       )
     }
@@ -330,12 +381,19 @@ export function UploadHistory({
 
     if (statusFilter !== 'all') {
       const s = String(item.status || 'pending').toLowerCase()
+      const locked = Boolean(item && (item.isLocked || item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by))
+      const isPendingState = s === 'pending' || s === 'pending_review' || s === 'processing' || !item.status
+
       if (statusFilter === 'approved') {
         if (s !== 'approved' && s !== 'completed') return false
       } else if (statusFilter === 'failed') {
-        if (s !== 'failed' && s !== 'rejected') return false
+        if (s !== 'failed') return false
+      } else if (statusFilter === 'rejected') {
+        if (s !== 'rejected') return false
+      } else if (statusFilter === 'locked') {
+        if (!isPendingState || !locked) return false
       } else if (statusFilter === 'pending') {
-        if (s !== 'pending' && s !== 'pending_review' && s !== 'processing') return false
+        if (!isPendingState || (role === 'broker' && locked)) return false
       } else if (statusFilter === 'revoked') {
         if (s !== 'revoked') return false
       }
@@ -426,7 +484,7 @@ export function UploadHistory({
           <StatusFilterDropdown
             selectedStatus={statusFilter}
             onStatusChange={(newStatus) => setStatusFilter(newStatus)}
-            isBroker={false}
+            isBroker={role === 'broker'}
           />
 
           <DateRangeFilterDropdown
@@ -735,7 +793,7 @@ export function UploadHistory({
       )}
 
       {/* Delete / Revoke Success Notification Toast */}
-      {deleteSuccessToast && (
+      {deleteSuccessToast && typeof document !== 'undefined' && createPortal(
         <div className="history-success-toast">
           <CheckCircleIcon size={16} />
           <span>{deleteSuccessToast}</span>
@@ -746,11 +804,12 @@ export function UploadHistory({
           >
             ×
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Rejection Feedback Note Viewer Modal for HR */}
-      {activeFeedbackItem && (
+      {activeFeedbackItem && typeof document !== 'undefined' && createPortal(
         <div
           className="delete-modal-backdrop"
           onClick={() => setActiveFeedbackItem(null)}
@@ -808,11 +867,12 @@ export function UploadHistory({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete / Revoke Confirmation & Lock-Check Modal */}
-      {itemToDelete && (
+      {itemToDelete && typeof document !== 'undefined' && createPortal(
         <div
           className="delete-modal-backdrop"
           onClick={() => {
@@ -921,7 +981,8 @@ export function UploadHistory({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

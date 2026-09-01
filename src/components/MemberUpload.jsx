@@ -847,18 +847,37 @@ export default function MemberUpload({
       if (worksheet) {
         const headerRow = worksheet.getRow(1)
         const dateColNumbers = []
+        const textColNumbers = []
 
         headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-          const val = String(cell.value || '').toLowerCase()
-          if (
+          const val = String(cell.value || '').toLowerCase().trim()
+          const isExplicitIdOrCode = (
+            val.includes('no') ||
+            val.includes('number') ||
+            val.includes('id') ||
+            val.includes('member') ||
+            val.includes('policy') ||
+            val.includes('code') ||
+            val.includes('mobile') ||
+            val.includes('phone') ||
+            val.includes('passport') ||
+            val.includes('staff') ||
+            val.includes('pih')
+          )
+
+          const isDate = !isExplicitIdOrCode && (
             val.includes('date') ||
             val.includes('dob') ||
             val.includes('effective') ||
             val.includes('expiry') ||
             val.includes('entry') ||
             val.includes('birth')
-          ) {
+          )
+
+          if (isDate) {
             dateColNumbers.push(colNumber)
+          } else {
+            textColNumbers.push(colNumber)
           }
         })
 
@@ -866,9 +885,19 @@ export default function MemberUpload({
           const col = worksheet.getColumn(colNum)
           col.numFmt = 'yyyy-mm-dd'
 
-          for (let r = 2; r <= 500; r++) {
+          for (let r = 2; r <= 1000; r++) {
             const cell = worksheet.getRow(r).getCell(colNum)
             cell.numFmt = 'yyyy-mm-dd'
+          }
+        })
+
+        textColNumbers.forEach((colNum) => {
+          const col = worksheet.getColumn(colNum)
+          col.numFmt = '@'
+
+          for (let r = 2; r <= 1000; r++) {
+            const cell = worksheet.getRow(r).getCell(colNum)
+            cell.numFmt = '@'
           }
         })
       }

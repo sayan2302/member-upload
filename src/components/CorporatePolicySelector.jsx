@@ -50,7 +50,7 @@ export function CorporatePolicySelector({
   // Close dropdowns on outside click or Escape
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (!e.target.closest('.policy-control-group')) {
         setOpenDropdownCorpId(null)
       }
     }
@@ -146,7 +146,7 @@ export function CorporatePolicySelector({
   return (
     <section 
       ref={containerRef}
-      className={`upload-card corporate-container-card ${isCollapsed ? 'is-card-collapsed' : ''}`}
+      className={`upload-card corporate-container-card ${isCollapsed ? 'is-card-collapsed' : ''} ${openDropdownCorpId ? 'is-dropdown-active' : ''}`}
       aria-label={titleText}
     >
       {/* Section Header */}
@@ -235,7 +235,7 @@ export function CorporatePolicySelector({
               })
 
               return (
-                <div key={corp.id} className="corporate-policy-card">
+                <div key={corp.id} className={`corporate-policy-card ${isDropdownOpen ? 'is-dropdown-active' : ''}`}>
                   {/* Top: Corporate Company Info & Copy Name */}
                   <div className="corp-card-top">
                     <div className="corp-identity">
@@ -272,7 +272,7 @@ export function CorporatePolicySelector({
                   {/* Bottom: Policy Selector Control */}
                   <div className="corp-card-bottom">
                     {corpPolicies.length > 1 ? (
-                      <div className="policy-control-group">
+                      <div className={`policy-control-group ${isDropdownOpen ? 'is-dropdown-active' : ''}`}>
                         {/* Interactive Full-Width Dropdown Button */}
                         <button
                           type="button"
@@ -305,7 +305,7 @@ export function CorporatePolicySelector({
                           <div className="policy-dropdown-popover-menu" role="listbox">
                             <div className="popover-top-bar">
                               <span className="popover-title">Select &amp; Copy Policy ({corpPolicies.length})</span>
-                              <span className="popover-subtitle">Click any policy to copy number</span>
+                              <span className="popover-subtitle">Click to select, Copy to copy number</span>
                             </div>
 
                             {corpPolicies.length > 4 && (
@@ -331,6 +331,7 @@ export function CorporatePolicySelector({
                                 const pNo = pol.policy_no || pol.id || pol.pol_id || ''
                                 const pName = pol.policy_name || pol.plan_name || ''
                                 const isSelected = pNo === activePolicyNo
+                                const isRowCopied = copiedKey === `pop-${corp.id}-${pNo}`
 
                                 return (
                                   <div
@@ -338,13 +339,11 @@ export function CorporatePolicySelector({
                                     className={`popover-policy-row ${isSelected ? 'is-selected' : ''}`}
                                     onClick={() => {
                                       setSelectedPolicies(prev => ({ ...prev, [corp.id]: pNo }))
-                                      handleCopy(pNo, `pop-${corp.id}-${pNo}`, pNo)
-                                      setOpenDropdownCorpId(null)
                                     }}
                                     role="option"
                                     aria-selected={isSelected}
                                     style={{ cursor: 'pointer' }}
-                                    title={`Click to copy "${pNo}"`}
+                                    title={`Click to select "${pNo}"`}
                                   >
                                     <div className="row-info">
                                       <span className="row-policy-no">{pNo}</span>
@@ -352,11 +351,29 @@ export function CorporatePolicySelector({
                                     </div>
 
                                     <div className="row-action">
-                                      {isSelected && (
-                                        <span className="status-badge is-selected" title="Currently selected">
-                                          <CheckIcon size={11} /> Selected
-                                        </span>
-                                      )}
+                                      <button
+                                        type="button"
+                                        className={`row-copy-btn ${isRowCopied ? 'is-copied' : ''}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setSelectedPolicies(prev => ({ ...prev, [corp.id]: pNo }))
+                                          handleCopy(pNo, `pop-${corp.id}-${pNo}`, pNo)
+                                          setOpenDropdownCorpId(null)
+                                        }}
+                                        title={`Copy "${pNo}"`}
+                                      >
+                                        {isRowCopied ? (
+                                          <>
+                                            <CheckIcon size={11} />
+                                            <span>Copied!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CopyIcon size={11} />
+                                            <span>Copy</span>
+                                          </>
+                                        )}
+                                      </button>
                                     </div>
                                   </div>
                                 )
@@ -432,7 +449,7 @@ export function CorporatePolicySelector({
             <CheckIcon size={13} />
           </div>
           <div className="copy-toast-content">
-            <span>Copied <strong>"{copyToastText}"</strong></span>
+            <span>Copied <strong>"{copyToastText}"</strong> to clipboard</span>
           </div>
         </div>,
         document.body

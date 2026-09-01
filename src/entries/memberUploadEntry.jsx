@@ -172,7 +172,14 @@ function initMemberUpload() {
       ? providerCorpIdAttr.trim()
       : null
 
-    const role = (roleAttr || globalConfig.role || 'hr').toLowerCase()
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlRole = urlParams.get('role')?.toLowerCase()
+    const pathLower = window.location.pathname.toLowerCase()
+    const isBrokerPath = pathLower.includes('/brokerhome') || pathLower.includes('/broker')
+    const isHRPath = pathLower.includes('/hrhome') || pathLower.includes('/hr')
+    const pathRole = isBrokerPath ? 'broker' : isHRPath ? 'hr' : null
+
+    const role = (urlRole || pathRole || roleAttr || globalConfig.role || 'hr').toLowerCase()
     const corpId = rawCorpId || rawProviderId || firstCorpId || globalConfig.corpId || globalConfig.corp_id || (role === 'hr' ? '1422138' : '')
     const providerCorpId = rawProviderId || corpId
     const brokerId = (brokerIdAttr && brokerIdAttr.trim() !== '')

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DownloadIcon,
   ExcelFileIcon,
@@ -186,8 +187,8 @@ export function BrokerDashboard({
     }
   }, [hasValidationErrors])
 
-  const fetchDashboard = useCallback(async () => {
-    setIsLoading(true)
+  const fetchDashboard = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true)
     setError('')
     try {
       const clientCorpIds = Array.isArray(corporates)
@@ -243,7 +244,7 @@ export function BrokerDashboard({
       console.error('[BrokerDashboard] Fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
     } finally {
-      setIsLoading(false)
+      if (!isSilent) setIsLoading(false)
     }
   }, [apiConfig, corporates, corpId, providerCorpId, userEmail])
 
@@ -288,6 +289,22 @@ export function BrokerDashboard({
     if (!item.uuid || processingUuid) return
     setProcessingUuid(item.uuid)
     
+    // Optimistically update the item state so the UI immediately shows "Locked by You" & upload/unlock buttons without any lag
+    setHistoryItems((prev) =>
+      prev.map((it) =>
+        it.uuid === item.uuid
+          ? {
+              ...it,
+              isLocked: true,
+              lockedByUserId: brokerId,
+              locked_by_user_id: brokerId,
+              lockedBy: brokerId,
+              locked_by: brokerId,
+            }
+          : it
+      )
+    )
+
     try {
       const lockRes = await brokerFetch(`${apiConfig.apiBaseUrl}/uploads3/lock/${item.uuid}`, { method: 'POST' })
       if (!lockRes.ok) {
@@ -295,12 +312,13 @@ export function BrokerDashboard({
         throw new Error(errorData.error || `Lock failed (${lockRes.status})`)
       }
 
-      await fetchDashboard()
+      await fetchDashboard(true)
       await downloadOriginal(item)
 
     } catch (err) {
       console.error('[BrokerDashboard] Lock & Download error:', err)
       setError(err instanceof Error ? err.message : 'Could not lock and download the file.')
+      await fetchDashboard(true)
     } finally {
       setProcessingUuid(null)
     }
@@ -317,17 +335,35 @@ export function BrokerDashboard({
     const item = unlockConfirmItem
     setProcessingUuid(item.uuid)
     setError('')
+    setUnlockConfirmItem(null)
+
+    // Optimistically update the item state to unlocked immediately
+    setHistoryItems((prev) =>
+      prev.map((it) =>
+        it.uuid === item.uuid
+          ? {
+              ...it,
+              isLocked: false,
+              lockedByUserId: null,
+              locked_by_user_id: null,
+              lockedBy: null,
+              locked_by: null,
+            }
+          : it
+      )
+    )
+
     try {
       const res = await brokerFetch(`${apiConfig.apiBaseUrl}/uploads3/unlock/${item.uuid}`, { method: 'POST' })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         throw new Error(errorData.error || `Unlock failed (${res.status})`)
       }
-      setUnlockConfirmItem(null)
-      await fetchDashboard()
+      await fetchDashboard(true)
     } catch (err) {
       console.error('[BrokerDashboard] Unlock error:', err)
       setError(err instanceof Error ? err.message : 'Could not unlock the file.')
+      await fetchDashboard(true)
     } finally {
       setProcessingUuid(null)
     }
@@ -369,9 +405,29 @@ export function BrokerDashboard({
       }
 
       const rejectedName = itemToReject.fileName
+      const itemUuid = itemToReject.uuid
       setItemToReject(null)
       setRejectionSuccessToast(`Submission "${rejectedName}" was successfully marked as Rejected.`)
-      await fetchDashboard()
+      
+      // Optimistically update status
+      setHistoryItems((prev) =>
+        prev.map((it) =>
+          it.uuid === itemUuid
+            ? {
+                ...it,
+                status: 'rejected',
+                rejectionDetails: {
+                  reason: selectedPresetReason,
+                  comment: commentTrimmed,
+                  rejectedAt: new Date().toISOString(),
+                  rejectedByEmail: userEmail || 'Broker Reviewer',
+                },
+              }
+            : it
+        )
+      )
+
+      await fetchDashboard(true)
     } catch (err) {
       console.error('[BrokerDashboard] Reject error:', err)
       setRejectError(err instanceof Error ? err.message : 'Could not reject file.')
@@ -393,6 +449,30 @@ export function BrokerDashboard({
     }
   }
 
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(activeFeedbackItem || itemToReject || unlockConfirmItem);
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          if (!isRejecting) {
+            setItemToReject(null);
+            setRejectError('');
+          }
+          setActiveFeedbackItem(null);
+          setUnlockConfirmItem(null);
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [activeFeedbackItem, itemToReject, unlockConfirmItem, isRejecting]);
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '—'
     try {
@@ -406,7 +486,10 @@ export function BrokerDashboard({
     }
   }
 
-  const getStatusBadge = (status, lockedByUserId, rejectionDetails) => {
+  const isItemLocked = (item) => Boolean(item && (item.isLocked || item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by));
+  const getLockedUserId = (item) => item ? (item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by || null) : null;
+
+  const getStatusBadge = (status, lockedByUserId, rejectionDetails, itemObj) => {
     const s = String(status || 'pending').toLowerCase()
     
     if (s === 'approved' || s === 'completed') {
@@ -421,7 +504,20 @@ export function BrokerDashboard({
       )
     }
 
-    if (s === 'rejected' || s === 'failed') {
+    if (s === 'failed') {
+      return (
+        <span 
+          className="history-badge is-failed" 
+          style={{ background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' }}
+          title="Validation or system processing failed."
+        >
+          <CloseIcon size={12} />
+          <span>Failed</span>
+        </span>
+      )
+    }
+
+    if (s === 'rejected') {
       return (
         <span 
           className={`history-badge is-rejected ${rejectionDetails ? 'has-feedback-trigger' : ''}`}
@@ -451,8 +547,11 @@ export function BrokerDashboard({
       )
     }
 
-    if (lockedByUserId) {
-      if (String(lockedByUserId) === String(brokerId)) {
+    const locked = isItemLocked(itemObj || { lockedByUserId });
+    const lockedUserId = getLockedUserId(itemObj || { lockedByUserId }) || lockedByUserId;
+
+    if (locked) {
+      if (String(lockedUserId) === String(brokerId)) {
         return (
           <span 
             className="history-badge is-pending" 
@@ -468,10 +567,10 @@ export function BrokerDashboard({
           <span 
             className="history-badge is-pending" 
             style={{ background: '#f1f5f9', color: '#64748b', borderColor: '#e2e8f0' }}
-            title={`Locked by ${lockedByUserId}: Another broker is currently reviewing/editing this submission.`}
+            title={`Locked by ${lockedUserId}: Another broker is currently reviewing/editing this submission.`}
           >
             <LockIcon size={12} />
-            <span>Locked by {lockedByUserId}</span>
+            <span>Locked by {lockedUserId}</span>
           </span>
         )
       }
@@ -479,8 +578,8 @@ export function BrokerDashboard({
 
     return (
       <span 
-        className="history-badge is-pending"
-        title="Pending: Uploaded by HR. Awaiting broker review and validation."
+        className="history-badge is-pending" 
+        title="Pending: Uploaded by HR, awaiting broker validation."
       >
         <ClockIcon size={12} />
         <span>Pending</span>
@@ -505,14 +604,19 @@ export function BrokerDashboard({
 
     if (statusFilter !== 'all') {
       const s = String(item.status || 'pending').toLowerCase();
+      const locked = isItemLocked(item);
+      const isPendingState = s === 'pending' || s === 'pending_review' || s === 'processing' || !item.status;
+
       if (statusFilter === 'approved') {
         if (s !== 'approved' && s !== 'completed') return false;
       } else if (statusFilter === 'failed') {
-        if (s !== 'failed' && s !== 'rejected') return false;
+        if (s !== 'failed') return false;
+      } else if (statusFilter === 'rejected') {
+        if (s !== 'rejected') return false;
       } else if (statusFilter === 'locked') {
-        if (!item.lockedByUserId) return false;
+        if (!isPendingState || !locked) return false;
       } else if (statusFilter === 'pending') {
-        if (s !== 'pending' && s !== 'pending_review' && s !== 'processing') return false;
+        if (!isPendingState || locked) return false;
       } else if (statusFilter === 'revoked') {
         if (s !== 'revoked') return false;
       }
@@ -551,7 +655,6 @@ export function BrokerDashboard({
       const recB = Number(b.noOfRows ?? b.validRows ?? 0)
       comp = recA - recB
     } else {
-      // Default: 'date'
       const timeA = getTime(a)
       const timeB = getTime(b)
       comp = timeA - timeB
@@ -579,12 +682,14 @@ export function BrokerDashboard({
             aria-expanded={!isCollapsed}
             title={isCollapsed ? "Click to expand submissions" : "Click to collapse submissions"}
           >
-            <span className="history-title-text">File Submissions</span>
-            <span className="history-count-badge">
-              {Boolean(searchQuery.trim() || statusFilter !== 'all' || startDate || endDate)
-                ? filteredItems.length
-                : (totalServerCount !== null && totalServerCount > historyItems.length ? totalServerCount : historyItems.length)}
-            </span>
+            <h3 className="history-title" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              File Submissions
+              <span className="history-count-badge">
+                {Boolean(searchQuery.trim() || statusFilter !== 'all' || startDate || endDate)
+                  ? filteredItems.length
+                  : (totalServerCount ?? historyItems.length)}
+              </span>
+            </h3>
             <span className={`history-chevron-indicator ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
               <ChevronDownIcon size={16} />
             </span>
@@ -600,7 +705,7 @@ export function BrokerDashboard({
                 className="history-search-input"
                 placeholder="Search files..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
                 <button
@@ -640,12 +745,17 @@ export function BrokerDashboard({
 
             <button
               type="button"
-              className={`history-refresh-btn ${isManualRefreshing || isLoading ? 'is-refreshing' : ''}`}
+              className="history-refresh-btn"
               onClick={handleManualRefresh}
               disabled={isLoading || isManualRefreshing}
-              title="Refresh dashboard"
+              title="Refresh submissions list"
             >
-              <RefreshCwIcon size={14} className={isManualRefreshing || isLoading ? 'spin' : ''} />
+              <RefreshCwIcon
+                size={14}
+                style={{
+                  animation: (isLoading || isManualRefreshing) ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
               <span>Refresh</span>
             </button>
           </div>
@@ -655,25 +765,34 @@ export function BrokerDashboard({
       <div className={`history-collapsible-wrapper ${isCollapsed ? 'is-collapsed' : 'is-expanded'}`}>
         <div className="history-collapsible-inner">
           {error && (
-            <div className="message-banner is-error" role="alert" style={{ marginTop: '12px' }}>
-              <span className="message-icon"><AlertTriangleIcon size={18} /></span>
-              <span className="message-text">{error}</span>
-              <button type="button" className="retry-btn" onClick={fetchDashboard}>Retry</button>
+            <div className="history-error-banner">
+              <AlertTriangleIcon size={16} />
+              <span>{error}</span>
+              <button
+                type="button"
+                className="history-error-retry"
+                onClick={fetchDashboard}
+              >
+                Retry
+              </button>
             </div>
           )}
 
           {isLoading && historyItems.length === 0 ? (
-            <div className="history-loading">
-              <div className="spinner" />
-              <p>Loading file submissions…</p>
+            <div className="history-loading-skeleton">
+              <div className="skeleton-row" />
+              <div className="skeleton-row" />
+              <div className="skeleton-row" />
+            </div>
+          ) : historyItems.length === 0 ? (
+            <div className="history-empty-state">
+              <p>No member enrollment files found for this corporate group.</p>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="history-empty-state">
-              <div className="empty-icon-wrapper">
-                <ExcelFileIcon size={40} />
-              </div>
-              <h4>No Submissions Found</h4>
-              <p>There are no file submissions matching your current filters.</p>
+            <div className="history-empty-state" style={{ padding: '36px 16px' }}>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+                No files match your active filters or search query.
+              </p>
             </div>
           ) : (
             <div className="history-table-wrapper" style={{ marginTop: '16px', maxHeight: '500px', overflowY: 'auto' }}>
@@ -695,21 +814,21 @@ export function BrokerDashboard({
                             <InfoIcon size={13} />
                           </button>
                           <div className="status-popover-card">
-                            <div className="status-popover-header">Status Lifecycle Guide</div>
+                            <div className="status-popover-header">Broker Status Guide</div>
                             
                             <div className="status-popover-item">
                               <span className="status-dot dot-pending" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Pending</div>
-                                <div className="status-popover-desc">Uploaded by HR; awaiting broker review and validation.</div>
+                                <div className="status-popover-desc">Awaiting underwriting review (unclaimed by brokers).</div>
                               </div>
                             </div>
 
                             <div className="status-popover-item">
                               <span className="status-dot dot-locked" />
                               <div className="status-popover-text">
-                                <div className="status-popover-label">Locked by You / Broker</div>
-                                <div className="status-popover-desc">Locked for exclusive editing to prevent concurrent overwrites.</div>
+                                <div className="status-popover-label">Locked</div>
+                                <div className="status-popover-desc">Claimed for exclusive editing.</div>
                               </div>
                             </div>
 
@@ -717,7 +836,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-approved" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Approved</div>
-                                <div className="status-popover-desc">All member records validated and saved to database.</div>
+                                <div className="status-popover-desc">Enrollment finalized and active in underwriting system.</div>
                               </div>
                             </div>
 
@@ -725,7 +844,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-rejected" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Rejected</div>
-                                <div className="status-popover-desc">Rejected by broker with specific feedback comments for HR to correct.</div>
+                                <div className="status-popover-desc">Returned to HR with required correction comments.</div>
                               </div>
                             </div>
 
@@ -733,7 +852,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-failed" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Failed</div>
-                                <div className="status-popover-desc">Error occurred during validation or saving records to database.</div>
+                                <div className="status-popover-desc">Validation error or parsing failure on submission.</div>
                               </div>
                             </div>
 
@@ -741,7 +860,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-revoked" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Revoked</div>
-                                <div className="status-popover-desc">Revoked by HR; file is archived and cannot be downloaded or reviewed.</div>
+                                <div className="status-popover-desc">Revoked by HR prior to broker underwriting review.</div>
                               </div>
                             </div>
                           </div>
@@ -760,16 +879,16 @@ export function BrokerDashboard({
                           >
                             <InfoIcon size={13} />
                           </button>
-                          <div className="status-popover-card popover-right">
-                            <div className="status-popover-header">Action Buttons Guide</div>
+                          <div className="status-popover-card popover-right" style={{ width: '300px' }}>
+                            <div className="status-popover-header">Broker Actions Guide</div>
                             
                             <div className="status-popover-item">
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', flexShrink: 0 }}>
-                                <DownloadLockIcon size={13} />
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0e7ff', color: '#4f46e5', flexShrink: 0 }}>
+                                <UploadCloudIcon size={13} />
                               </div>
                               <div className="status-popover-text">
-                                <div className="status-popover-label" style={{ color: '#0284c7' }}>Download & Lock</div>
-                                <div className="status-popover-desc">Claim lock & download Excel template for review.</div>
+                                <div className="status-popover-label" style={{ color: '#4f46e5' }}>Upload Revised File</div>
+                                <div className="status-popover-desc">Upload corrected Excel file on locked submissions.</div>
                               </div>
                             </div>
 
@@ -778,8 +897,8 @@ export function BrokerDashboard({
                                 <UnlockIcon size={13} />
                               </div>
                               <div className="status-popover-text">
-                                <div className="status-popover-label" style={{ color: '#d97706' }}>Unlock File</div>
-                                <div className="status-popover-desc">Release lock to allow other brokers to review file.</div>
+                                <div className="status-popover-label" style={{ color: '#d97706' }}>Release Lock</div>
+                                <div className="status-popover-desc">Release your lock to let other team brokers review.</div>
                               </div>
                             </div>
 
@@ -789,27 +908,17 @@ export function BrokerDashboard({
                               </div>
                               <div className="status-popover-text">
                                 <div className="status-popover-label" style={{ color: '#dc2626' }}>Reject Submission</div>
-                                <div className="status-popover-desc">Reject submission and send feedback comments to HR.</div>
-                              </div>
-                            </div>
-
-                            <div className="status-popover-item">
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#f3e8ff', color: '#7e22ce', flexShrink: 0 }}>
-                                <UploadCloudIcon size={13} />
-                              </div>
-                              <div className="status-popover-text">
-                                <div className="status-popover-label" style={{ color: '#7e22ce' }}>Upload Revised File</div>
-                                <div className="status-popover-desc">Upload corrected Excel file on behalf of corporate HR.</div>
+                                <div className="status-popover-desc">Return submission to HR with mandatory feedback notes.</div>
                               </div>
                             </div>
 
                             <div className="status-popover-item">
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#dcfce7', color: '#16a34a', flexShrink: 0 }}>
-                                <DownloadIcon size={13} />
+                                <DownloadLockIcon size={13} />
                               </div>
                               <div className="status-popover-text">
-                                <div className="status-popover-label" style={{ color: '#16a34a' }}>Download File</div>
-                                <div className="status-popover-desc">Download submitted or approved Excel file.</div>
+                                <div className="status-popover-label" style={{ color: '#16a34a' }}>Download &amp; Lock</div>
+                                <div className="status-popover-desc">Download Excel file and claim exclusive edit lock.</div>
                               </div>
                             </div>
 
@@ -818,8 +927,8 @@ export function BrokerDashboard({
                                 <ClockIcon size={13} />
                               </div>
                               <div className="status-popover-text">
-                                <div className="status-popover-label" style={{ color: '#0284c7' }}>File History</div>
-                                <div className="status-popover-desc">Inspect lifecycle timeline, logs, and process history.</div>
+                                <div className="status-popover-label" style={{ color: '#0284c7' }}>File Audit History</div>
+                                <div className="status-popover-desc">Inspect multi-cycle events, timestamps, and versions.</div>
                               </div>
                             </div>
                           </div>
@@ -833,8 +942,9 @@ export function BrokerDashboard({
                     const isRevoked = String(item.status || 'pending').toLowerCase() === 'revoked';
                     const isRejected = String(item.status || 'pending').toLowerCase() === 'rejected';
                     const isApproved = String(item.status || 'pending').toLowerCase() === 'approved';
-                    const isLocked = !!item.lockedByUserId;
-                    const isLockedByMe = isLocked && String(item.lockedByUserId) === String(brokerId);
+                    const isLocked = isItemLocked(item);
+                    const lockedUserId = getLockedUserId(item);
+                    const isLockedByMe = isLocked && String(lockedUserId) === String(brokerId);
                     const isLockedByOther = isLocked && !isLockedByMe;
                     
                     return (
@@ -865,7 +975,7 @@ export function BrokerDashboard({
                           })()}
                         </td>
                         <td className="history-status-cell" style={{ whiteSpace: 'nowrap' }}>
-                          {getStatusBadge(item.status, item.lockedByUserId, item.rejectionDetails)}
+                          {getStatusBadge(item.status, item.lockedByUserId, item.rejectionDetails, item)}
                         </td>
                         <td className="history-action-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap', minWidth: '220px' }}>
                           <div className="broker-actions-grid">
@@ -876,15 +986,14 @@ export function BrokerDashboard({
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-upload"
-                                    onClick={() => onOpenUploadModal(item)}
-                                    disabled={processingUuid === item.uuid}
-                                    aria-label="Upload revised file"
+                                    onClick={() => onOpenUploadModal && onOpenUploadModal(item)}
+                                    aria-label="Upload Revised File"
                                   >
                                     <UploadCloudIcon size={14} />
                                   </button>
                                   <div className="broker-tooltip">
-                                    <span className="tooltip-title">Upload</span>
-                                    <span className="tooltip-desc">Submit Revised Excel file</span>
+                                    <span className="tooltip-title">Upload Revised File</span>
+                                    <span className="tooltip-desc">Upload fixed file for this corporate</span>
                                   </div>
                                 </div>
                               )}
@@ -897,15 +1006,15 @@ export function BrokerDashboard({
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-unlock"
-                                    onClick={() => handleUnlockClick(item)}
+                                    onClick={() => setUnlockConfirmItem(item)}
                                     disabled={processingUuid === item.uuid}
-                                    aria-label="Unlock file"
+                                    aria-label="Release lock"
                                   >
                                     <UnlockIcon size={14} />
                                   </button>
                                   <div className="broker-tooltip">
-                                    <span className="tooltip-title">Unlock</span>
-                                    <span className="tooltip-desc">Allow other brokers to review file</span>
+                                    <span className="tooltip-title">Release Lock</span>
+                                    <span className="tooltip-desc">Unlock so others can edit</span>
                                   </div>
                                 </div>
                               )}
@@ -918,15 +1027,20 @@ export function BrokerDashboard({
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-reject"
-                                    onClick={() => handleOpenRejectModal(item)}
+                                    onClick={() => {
+                                      setItemToReject(item)
+                                      setRejectError('')
+                                      setRejectionComment('')
+                                      setSelectedPresetReason(PRESET_REASONS[0])
+                                    }}
                                     disabled={processingUuid === item.uuid}
-                                    aria-label="Reject submission"
+                                    aria-label="Reject Submission"
                                   >
                                     <CloseIcon size={14} />
                                   </button>
-                                  <div className="broker-tooltip">
+                                  <div className="broker-tooltip tooltip-right">
                                     <span className="tooltip-title">Reject</span>
-                                    <span className="tooltip-desc">Reject file and send feedback to HR</span>
+                                    <span className="tooltip-desc">Return to HR with feedback</span>
                                   </div>
                                 </div>
                               )}
@@ -945,8 +1059,8 @@ export function BrokerDashboard({
                                   >
                                     <DownloadLockIcon size={15} />
                                   </button>
-                                  <div className="broker-tooltip">
-                                    <span className="tooltip-title">Download & Lock</span>
+                                  <div className="broker-tooltip tooltip-right">
+                                    <span className="tooltip-title">Download &amp; Lock</span>
                                     <span className="tooltip-desc">Claim lock & download template</span>
                                   </div>
                                 </div>
@@ -963,9 +1077,9 @@ export function BrokerDashboard({
                                   >
                                     <DownloadIcon size={14} />
                                   </button>
-                                  <div className="broker-tooltip">
-                                    <span className="tooltip-title">Download</span>
-                                    <span className="tooltip-desc">Download Submitted file</span>
+                                  <div className="broker-tooltip tooltip-right">
+                                    <span className="tooltip-title">Download File</span>
+                                    <span className="tooltip-desc">Download original spreadsheet</span>
                                   </div>
                                 </div>
                               )}
@@ -975,50 +1089,32 @@ export function BrokerDashboard({
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-locked-other"
-                                    disabled={true}
-                                    aria-label={`Locked by Broker ${item.lockedByUserId}`}
+                                    disabled
+                                    aria-label={`Locked by Broker ${lockedUserId || item.lockedByUserId}`}
                                   >
                                     <LockIcon size={14} />
                                   </button>
-                                  <div className="broker-tooltip">
-                                    <span className="tooltip-title">Locked by Broker {item.lockedByUserId}</span>
-                                    <span className="tooltip-desc">Under active review by another broker</span>
+                                  <div className="broker-tooltip tooltip-right">
+                                    <span className="tooltip-title">Locked by Broker {lockedUserId || item.lockedByUserId}</span>
+                                    <span className="tooltip-desc">Currently claimed by another broker</span>
                                   </div>
                                 </div>
                               )}
 
-                              {!isRevoked && !isRejected && isApproved && (
+                              {(isApproved || isRejected) && (
                                 <div className="broker-icon-btn-wrap">
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-download"
                                     onClick={() => handleDownload(item)}
                                     disabled={processingUuid === item.uuid}
-                                    aria-label="Download approved file"
+                                    aria-label="Download spreadsheet"
                                   >
                                     <DownloadIcon size={14} />
                                   </button>
-                                  <div className="broker-tooltip">
+                                  <div className="broker-tooltip tooltip-right">
                                     <span className="tooltip-title">Download</span>
-                                    <span className="tooltip-desc">Download approved file</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {isRejected && (
-                                <div className="broker-icon-btn-wrap">
-                                  <button
-                                    type="button"
-                                    className="broker-icon-btn btn-download"
-                                    onClick={() => handleDownload(item)}
-                                    disabled={processingUuid === item.uuid}
-                                    aria-label="Download rejected file"
-                                  >
-                                    <DownloadIcon size={14} />
-                                  </button>
-                                  <div className="broker-tooltip">
-                                    <span className="tooltip-title">Download</span>
-                                    <span className="tooltip-desc">Download rejected file</span>
+                                    <span className="tooltip-desc">Download original file</span>
                                   </div>
                                 </div>
                               )}
@@ -1030,13 +1126,13 @@ export function BrokerDashboard({
                                     className="broker-icon-btn btn-download"
                                     onClick={() => handleDownload(item)}
                                     disabled={processingUuid === item.uuid}
-                                    aria-label="Download revoked file"
+                                    aria-label="Download spreadsheet"
                                   >
                                     <DownloadIcon size={14} />
                                   </button>
-                                  <div className="broker-tooltip">
+                                  <div className="broker-tooltip tooltip-right">
                                     <span className="tooltip-title">Download</span>
-                                    <span className="tooltip-desc">Download revoked file</span>
+                                    <span className="tooltip-desc">Download original file</span>
                                   </div>
                                 </div>
                               )}
@@ -1071,8 +1167,7 @@ export function BrokerDashboard({
         </div>
       </div>
 
-      {/* Rejection Toast Notification */}
-      {rejectionSuccessToast && (
+      {rejectionSuccessToast && typeof document !== 'undefined' && createPortal(
         <div className="history-success-toast">
           <CheckCircleIcon size={16} />
           <span>{rejectionSuccessToast}</span>
@@ -1083,11 +1178,11 @@ export function BrokerDashboard({
           >
             ×
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Rejection Modal Dialog (Broker Action) */}
-      {itemToReject && (
+      {itemToReject && typeof document !== 'undefined' && createPortal(
         <div
           className="delete-modal-backdrop"
           onClick={() => {
@@ -1158,7 +1253,6 @@ export function BrokerDashboard({
                 </div>
               </div>
 
-              {/* Preset Reason Chips */}
               <div className="reject-field-group">
                 <label className="reject-field-label">
                   Reason Category <span style={{ color: '#ef4444' }}>*</span>
@@ -1178,7 +1272,6 @@ export function BrokerDashboard({
                 </div>
               </div>
 
-              {/* Detailed Feedback Note */}
               <div className="reject-field-group" style={{ marginTop: '12px' }}>
                 <label className="reject-field-label">
                   Comments for HR <span style={{ color: '#ef4444' }}>*</span>
@@ -1225,11 +1318,11 @@ export function BrokerDashboard({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Rejection Feedback Note Viewer Modal */}
-      {activeFeedbackItem && (
+      {activeFeedbackItem && typeof document !== 'undefined' && createPortal(
         <div
           className="delete-modal-backdrop"
           onClick={() => setActiveFeedbackItem(null)}
@@ -1280,11 +1373,11 @@ export function BrokerDashboard({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Unlock Confirmation Modal Dialog */}
-      {unlockConfirmItem && (
+      {unlockConfirmItem && typeof document !== 'undefined' && createPortal(
         <div className="success-modal-overlay" role="dialog" aria-modal="true">
           <div className="success-modal-card" style={{ maxWidth: '440px', textAlign: 'center' }}>
             <button
@@ -1328,7 +1421,8 @@ export function BrokerDashboard({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
