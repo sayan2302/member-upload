@@ -8,15 +8,9 @@ import {
 } from './Icons.jsx'
 
 export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
-  const [activeTab, setActiveTab] = useState(currentRole === 'broker' ? 'broker' : 'hr')
+  const isBroker = currentRole === 'broker'
+  const activeTab = isBroker ? 'broker' : 'hr'
   const modalContentRef = useRef(null)
-
-  // Sync role tab when opened
-  useEffect(() => {
-    if (isOpen) {
-      setActiveTab(currentRole === 'broker' ? 'broker' : 'hr')
-    }
-  }, [isOpen, currentRole])
 
   // ESC key to close
   useEffect(() => {
@@ -43,7 +37,7 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
     { cat: 'Sum Insured', text: 'Enter numeric Sum Insured matching approved corporate policy tiers (e.g. 500000 without commas or currency symbols).' },
     { cat: 'Validation Preview', text: 'Review highlighted cell errors in the interactive preview table before submitting.' },
     { cat: 'Submission Tracking', text: 'Monitor processing status and download historical records from the "Past Uploads" tab.' },
-    { cat: 'Revoke Mistaken Uploads', text: 'Use the "Revoke" button to recall mistakenly uploaded files before a broker locks them.' }
+    { cat: 'Revoke Mistaken Uploads', text: 'Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.' }
   ]
 
   const hrDonts = [
@@ -52,12 +46,12 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
     { cat: 'Invalid Dates', text: 'Do NOT use text or impossible dates like "31/02/2024" or "12th Jan 90".' },
     { cat: 'Password Protection', text: 'Do NOT upload password-protected, encrypted, or corrupted Excel workbooks.' },
     { cat: 'Trailing Spaces', text: 'Do NOT leave leading or trailing whitespace in Employee ID, Mobile Number, or Email fields.' },
-    { cat: 'Duplicate Batches', text: 'Do NOT re-upload identical files while a previous submission is still pending broker review.' }
+    { cat: 'Duplicate Batches', text: 'Do NOT re-upload identical files while a previous submission is still pending LawtonAsia review.' }
   ]
 
   const brokerDos = [
     { cat: 'Exclusive Lock', text: 'Click "Download & Lock" on an HR submission to lock exclusive review and editing rights.' },
-    { cat: '61-Column Schema', text: 'Use the expanded 61-column broker template containing all 28 underwriting and TPA fields.' },
+    { cat: '61-Column Schema', text: 'Use the expanded 61-column LawtonAsia template containing all 28 underwriting and TPA fields.' },
     { cat: 'Prompt Unlock', text: 'Click "Unlock" if you are not proceeding, releasing the lock so team members can claim the file.' },
     { cat: 'Rejection Feedback', text: 'When rejecting a file, select a categorized reason and provide clear comments for HR to fix.' },
     { cat: 'Policy Verification', text: 'Verify insurer policy numbers, TPA codes, and endorsement IDs before committing to the database.' },
@@ -68,7 +62,7 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
     { cat: 'No Unlocked Edits', text: 'Do NOT attempt to upload revised files without first claiming and locking the submission.' },
     { cat: 'System Columns', text: 'Do NOT modify or delete system-generated RowId, Unique ID, or employee linkage columns.' },
     { cat: 'Lock Hoarding', text: 'Do NOT leave files locked indefinitely without active review or communication.' },
-    { cat: 'Other Brokers Files', text: 'Do NOT attempt to reject or overwrite files currently claimed and locked by another broker.' },
+    { cat: 'Other LawtonAsia Files', text: 'Do NOT attempt to reject or overwrite files currently claimed and locked by another LawtonAsia team member.' },
     { cat: 'Unresolved Errors', text: 'Do NOT commit batches containing uncorrected validation errors into the live database.' }
   ]
 
@@ -100,22 +94,21 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
           </div>
 
           <div className="modal-header-right">
-            {/* Role switch tabs */}
-            <div className="modal-role-tabs">
-              <button
-                type="button"
-                className={`modal-role-btn ${activeTab === 'hr' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('hr')}
-              >
-                <span>🏢 HR Administrator</span>
-              </button>
-              <button
-                type="button"
-                className={`modal-role-btn ${activeTab === 'broker' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('broker')}
-              >
-                <span>💼 Broker Underwriter</span>
-              </button>
+            {/* Role indicator badge */}
+            <div className="modal-role-badge">
+              <span className="guide-active-role-pill" style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                padding: '4px 10px',
+                borderRadius: '6px',
+                background: isBroker ? '#e0f2fe' : '#f1f5f9',
+                color: isBroker ? '#0369a1' : '#334155',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                {isBroker ? '💼 LawtonAsia Underwriter' : '🏢 HR Administrator'}
+              </span>
             </div>
 
             {/* Close Button */}

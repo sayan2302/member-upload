@@ -654,13 +654,13 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     return (
                       <div className="event-actor-card">
                         <div className="actor-avatar-badge">
-                          {actor.role === 'BROKER' ? 'BR' : 'HR'}
+                          {actor.role === 'BROKER' || actor.role === 'LAWTONASIA' ? 'LA' : 'HR'}
                         </div>
                         <div className="actor-info">
                           <div className="actor-name-row">
                             <span className="actor-name">{actor.name}</span>
                             <span className={`actor-role-pill is-${actor.role.toLowerCase()}`}>
-                              {actor.role}
+                              {actor.role === 'BROKER' ? 'LAWTONASIA' : actor.role}
                             </span>
                           </div>
                           {actor.email && (
@@ -683,7 +683,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                   <div className="audit-callout-box is-rejection">
                     <div className="callout-icon"><MessageSquareIcon size={16} /></div>
                     <div className="callout-body">
-                      <strong>Broker Rejection Feedback Note:</strong>
+                      <strong>LawtonAsia Rejection Feedback Note:</strong>
                       <p className="rejection-quote">"{activeTx.rejection_comments}"</p>
                       {activeTx.rejection_reason && (
                         <span className="rejection-tag">Reason: {activeTx.rejection_reason}</span>
@@ -707,7 +707,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     <div className="callout-icon"><ZapIcon size={16} /></div>
                     <div className="callout-body">
                       <strong>Force Ingestion Executed:</strong>
-                      <p>Broker bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
+                      <p>LawtonAsia bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
                     </div>
                   </div>
                 )}

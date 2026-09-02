@@ -18,18 +18,13 @@ export function InteractiveVideoSimulator({
   onOpenFullscreen, 
   compact = false 
 }) {
+  const isBroker = role === 'broker'
+  const activeRoleTab = isBroker ? 'broker' : 'hr'
   const [isPlaying, setIsPlaying] = useState(true)
   const [playbackTime, setPlaybackTime] = useState(0) // 0 to 16 seconds
   const [playbackSpeed, setPlaybackSpeed] = useState(1) // 1x or 1.5x
-  const [activeRoleTab, setActiveRoleTab] = useState(role === 'broker' ? 'broker' : 'hr')
 
   const TOTAL_DURATION = 16 // 16s total (4s per scene)
-
-  useEffect(() => {
-    setActiveRoleTab(role === 'broker' ? 'broker' : 'hr')
-    setPlaybackTime(0)
-    setIsPlaying(true)
-  }, [role])
 
   // Continuous animation timer (40ms = 25fps)
   useEffect(() => {
@@ -88,9 +83,9 @@ export function InteractiveVideoSimulator({
             const p = sceneProgress / 0.4
             return { x: 30 + p * 20, y: 30 + p * 35, action: 'Verifying 100% Valid', clicking: false }
           } else if (sceneProgress < 0.75) {
-            return { x: 50, y: 65, action: 'Submitting to Broker', clicking: true }
+            return { x: 50, y: 65, action: 'Submitting to LawtonAsia', clicking: true }
           } else {
-            return { x: 50, y: 65, action: 'Submitted to Broker ✓', clicking: false }
+            return { x: 50, y: 65, action: 'Submitted to LawtonAsia ✓', clicking: false }
           }
         default:
           return { x: 50, y: 50, action: '', clicking: false }
@@ -149,8 +144,8 @@ export function InteractiveVideoSimulator({
     {
       id: 3,
       badge: 'Step 4',
-      title: 'Hand-off to Broker',
-      desc: '100% accepted batch sent to broker queue for underwriting.',
+      title: 'Hand-off to LawtonAsia',
+      desc: '100% accepted batch sent to LawtonAsia queue for underwriting.',
       icon: <UploadCloudIcon size={16} />
     }
   ]
@@ -203,34 +198,15 @@ export function InteractiveVideoSimulator({
           <span className="video-title-text">
             {activeRoleTab === 'hr' 
               ? 'HR Administrator: Step-by-Step Enrollment & Validation' 
-              : 'Broker Underwriter: Locking, 61-Col Expansion & Approval'}
+              : 'LawtonAsia Underwriter: Locking, 61-Col Expansion & Approval'}
           </span>
         </div>
 
         <div className="video-meta-right">
           <div className="v-role-toggle-pill">
-            <button
-              type="button"
-              className={`v-role-pill-btn ${activeRoleTab === 'hr' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveRoleTab('hr')
-                setPlaybackTime(0)
-                setIsPlaying(true)
-              }}
-            >
-              🏢 HR Mode
-            </button>
-            <button
-              type="button"
-              className={`v-role-pill-btn ${activeRoleTab === 'broker' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveRoleTab('broker')
-                setPlaybackTime(0)
-                setIsPlaying(true)
-              }}
-            >
-              💼 Broker Mode
-            </button>
+            <span className="v-role-pill-btn is-active" style={{ cursor: 'default' }}>
+              {isBroker ? '💼 LawtonAsia Mode' : '🏢 HR Mode'}
+            </span>
           </div>
 
           <button
@@ -270,7 +246,7 @@ export function InteractiveVideoSimulator({
             <span className="w-dot green" />
           </div>
           <span className="v-window-title">
-            Mayfair Member Portal — {activeRoleTab === 'hr' ? 'HR Enrollment Simulator' : 'Broker Underwriting Simulator'}
+            Mayfair Member Portal — {activeRoleTab === 'hr' ? 'HR Enrollment Simulator' : 'LawtonAsia Underwriting Simulator'}
           </span>
           <span className="v-live-tag">LIVE DEMO</span>
         </div>
@@ -453,7 +429,7 @@ export function InteractiveVideoSimulator({
             /* Scene 4: Hand-off & Live Transmission */
             <div className="v-scene is-fade-in" key="hr-scene-3">
               <div className="v-scene-header">
-                <div className="v-scene-tag">Step 4 of 4: Hand-off to Broker</div>
+                <div className="v-scene-tag">Step 4 of 4: Hand-off to LawtonAsia</div>
                 <h4>100% Validated Batch Transmitted to Underwriting Queue</h4>
               </div>
 
@@ -469,7 +445,7 @@ export function InteractiveVideoSimulator({
                   <div>
                     <strong>Batch Submitted Successfully</strong>
                     <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      Status: 🟡 Pending Review (Broker Queue Notified)
+                      Status: 🟡 Pending Review (LawtonAsia Queue Notified)
                     </div>
                   </div>
                 </div>
@@ -508,7 +484,7 @@ export function InteractiveVideoSimulator({
 
                 {sceneProgress > 0.45 && (
                   <div className="v-lock-toast">
-                    <span>🔒 Exclusive Lock Assigned: Other team brokers see row as "Locked".</span>
+                    <span>🔒 Exclusive Lock Assigned: Other team members see row as "Locked".</span>
                   </div>
                 )}
               </div>

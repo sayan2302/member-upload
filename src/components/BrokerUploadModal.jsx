@@ -429,7 +429,7 @@ export function BrokerUploadModal({
           body: JSON.stringify({
             file_uuid: item.uuid,
             action_code: 'SESSION_CANCELLED',
-            action_title: 'Broker Cancelled Revision Session',
+            action_title: 'LawtonAsia Cancelled Revision Session',
             user_id: brokerId,
             role: 'broker',
             is_cancelled: true,

@@ -46,7 +46,7 @@ export function DevToolbar({
         <span style={styles.badgeText}>
           Dev: <strong>{role.toUpperCase()}</strong>{' '}
           {role === 'broker'
-            ? `(Broker #${brokerId})`
+            ? `(LawtonAsia #${brokerId})`
             : isGroupHR
             ? `(Group HR: corp_id = provider_corp_id = ${corpId})`
             : `(Single HR: corp_id = ${corpId}, provider = ${providerCorpId})`}
@@ -107,9 +107,9 @@ export function DevToolbar({
                 ...(role === 'broker' ? styles.modeBtnActive : {}),
               }}
               onClick={() => handlePreset('broker')}
-              title="Broker / Partner Portal"
+              title="LawtonAsia / Partner Portal"
             >
-              Broker / Partner (120)
+              LawtonAsia / Partner (120)
             </button>
           </div>
         </div>
@@ -118,7 +118,7 @@ export function DevToolbar({
         <form onSubmit={handleApply} style={styles.customForm}>
           {role === 'broker' ? (
             <div style={styles.inputGroup}>
-              <label style={styles.label} htmlFor="dev-broker-id">Broker ID:</label>
+              <label style={styles.label} htmlFor="dev-broker-id">LawtonAsia ID:</label>
               <input
                 id="dev-broker-id"
                 type="text"
@@ -165,7 +165,7 @@ export function DevToolbar({
         <span style={styles.footerItem}>
           <strong>Active Portal:</strong>{' '}
           <span style={{ color: role === 'broker' ? '#38bdf8' : isGroupHR ? '#f59e0b' : '#4ade80' }}>
-            {role === 'broker' ? 'BROKER / PARTNER' : isGroupHR ? 'GROUP CORPORATE / HR' : 'SINGLE CORPORATE / HR'}
+            {role === 'broker' ? 'LAWTONASIA / PARTNER' : isGroupHR ? 'GROUP CORPORATE / HR' : 'SINGLE CORPORATE / HR'}
           </span>
         </span>
         <span style={styles.footerItem}>
@@ -178,7 +178,7 @@ export function DevToolbar({
           <strong>Rule Match:</strong>{' '}
           <em style={{ color: isGroupHR ? '#fbbf24' : '#94a3b8' }}>
             {role === 'broker'
-              ? 'Broker mode (passes broker_id)'
+              ? 'LawtonAsia mode (passes broker_id)'
               : isGroupHR
               ? 'corp_id == provider_corp_id (Group Corporate)'
               : 'corp_id != provider_corp_id (Single Corporate)'}

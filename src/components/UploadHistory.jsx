@@ -122,7 +122,7 @@ export function UploadHistory({
     return {
       username: username || '—',
       email: email || '—',
-      roleTag: isBroker ? 'Broker' : 'HR',
+      roleTag: isBroker ? 'LawtonAsia' : 'HR',
     }
   }, [])
 
@@ -238,10 +238,11 @@ export function UploadHistory({
 
       if (!response.ok) {
         if (response.status === 409) {
-          throw new Error(
-            data.error ||
-              `Cannot delete file: This submission is currently locked by a broker for underwriting review. Please ask the broker to unlock it first.`
-          )
+          const rawErr = data.error || ''
+          const cleanErr = rawErr
+            ? rawErr.replace(/Broker \(ID: \d+\)/gi, 'LawtonAsia').replace(/Broker/gi, 'LawtonAsia').replace(/broker/gi, 'LawtonAsia')
+            : 'Cannot delete file: This submission is currently locked by LawtonAsia for underwriting review. Please ask LawtonAsia to unlock it first.'
+          throw new Error(cleanErr)
         }
         throw new Error(data.error || `Failed to delete file (${response.status})`)
       }
@@ -326,7 +327,7 @@ export function UploadHistory({
           className={`history-badge is-rejected ${item.rejectionDetails ? 'has-feedback-trigger' : ''}`}
           onClick={() => item.rejectionDetails && setActiveFeedbackItem(item.rejectionDetails)}
           style={{ cursor: item.rejectionDetails ? 'pointer' : 'default' }}
-          title={item.rejectionDetails ? "Click to view broker rejection comments" : "Submission rejected by broker"}
+          title={item.rejectionDetails ? "Click to view LawtonAsia rejection comments" : "Submission rejected by LawtonAsia"}
         >
           <MessageSquareIcon size={12} />
           <span>Rejected</span>
@@ -347,7 +348,7 @@ export function UploadHistory({
         <span 
           className="history-badge is-pending" 
           style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}
-          title="Locked: Under active broker review"
+          title="Locked: Under active LawtonAsia review"
         >
           <LockIcon size={12} />
           <span>Locked</span>
@@ -591,15 +592,15 @@ export function UploadHistory({
                           <span className="status-dot dot-pending" />
                           <div className="status-popover-text">
                             <div className="status-popover-label">Pending</div>
-                            <div className="status-popover-desc">Uploaded by HR; awaiting broker review and validation.</div>
+                            <div className="status-popover-desc">Uploaded by HR; awaiting LawtonAsia review and validation.</div>
                           </div>
                         </div>
 
                         <div className="status-popover-item">
                           <span className="status-dot dot-locked" />
                           <div className="status-popover-text">
-                            <div className="status-popover-label">Locked by Broker</div>
-                            <div className="status-popover-desc">A broker is reviewing this file (cannot be deleted while locked).</div>
+                            <div className="status-popover-label">Locked by LawtonAsia</div>
+                            <div className="status-popover-desc">LawtonAsia is reviewing this file (cannot be deleted while locked).</div>
                           </div>
                         </div>
 
@@ -615,7 +616,7 @@ export function UploadHistory({
                           <span className="status-dot dot-rejected" />
                           <div className="status-popover-text">
                             <div className="status-popover-label">Rejected</div>
-                            <div className="status-popover-desc">Rejected by broker with specific feedback comments (HR can fix & re-upload).</div>
+                            <div className="status-popover-desc">Rejected by LawtonAsia with specific feedback comments (HR can fix & re-upload).</div>
                           </div>
                         </div>
 
@@ -660,7 +661,7 @@ export function UploadHistory({
                             </div>
                             <div className="status-popover-text">
                               <div className="status-popover-label" style={{ color: '#dc2626' }}>Revoke Submission</div>
-                              <div className="status-popover-desc">Allows HR to revoke a file submission before a broker locks or reviews it.</div>
+                              <div className="status-popover-desc">Allows HR to revoke a file submission before LawtonAsia locks or reviews it.</div>
                             </div>
                           </div>
                         )}
@@ -738,7 +739,7 @@ export function UploadHistory({
                           </button>
                           <div className="broker-tooltip tooltip-right">
                             <span className="tooltip-title">Revoke</span>
-                            <span className="tooltip-desc">Revoke file before broker locks it</span>
+                            <span className="tooltip-desc">Revoke file before LawtonAsia locks it</span>
                           </div>
                         </div>
                       )}
@@ -826,9 +827,9 @@ export function UploadHistory({
                 <AlertTriangleIcon size={20} />
               </div>
               <div>
-                <h3 className="delete-modal-title" style={{ color: '#991b1b' }}>Broker Rejection Feedback</h3>
+                <h3 className="delete-modal-title" style={{ color: '#991b1b' }}>LawtonAsia Rejection Feedback</h3>
                 <span className="delete-modal-subtitle">
-                  Review the broker's required corrections before re-uploading
+                  Review LawtonAsia's required corrections before re-uploading
                 </span>
               </div>
               <button
@@ -851,8 +852,8 @@ export function UploadHistory({
 
               <div className="feedback-quote-card">
                 <div className="feedback-author-line">
-                  <strong>Broker Reviewer:</strong>
-                  <span className="feedback-author-email">{activeFeedbackItem.rejectedByEmail || 'Broker'}</span>
+                  <strong>LawtonAsia Reviewer:</strong>
+                  <span className="feedback-author-email">{activeFeedbackItem.rejectedByEmail || 'LawtonAsia'}</span>
                 </div>
                 <p className="feedback-comment-text">
                   "{activeFeedbackItem.comment || 'No specific feedback comment provided.'}"
@@ -928,7 +929,7 @@ export function UploadHistory({
               ) : (
                 <>
                   <p className="delete-lead-text">
-                    Are you sure you want to revoke this submission? It will be marked as <strong>Revoked</strong> and will no longer be available for broker review or download.
+                    Are you sure you want to revoke this submission? It will be marked as <strong>Revoked</strong> and will no longer be available for LawtonAsia review or download.
                   </p>
 
                   <div className="delete-file-summary-card">
@@ -949,7 +950,7 @@ export function UploadHistory({
                   <div className="delete-notice-box">
                     <AlertTriangleIcon size={16} />
                     <span>
-                      <strong>Safety Check:</strong> The system will verify that no broker has claimed or locked this file before marking it as revoked.
+                      <strong>Safety Check:</strong> The system will verify that LawtonAsia has not claimed or locked this file before marking it as revoked.
                     </span>
                   </div>
                 </>

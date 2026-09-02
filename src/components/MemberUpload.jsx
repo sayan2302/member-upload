@@ -1279,7 +1279,7 @@ export default function MemberUpload({
               <p className="upload-section-subtitle">
                 {resolvedRole === 'broker' 
                   ? 'Upload a revised Excel workbook to submit corrections for the selected HR file.'
-                  : 'Upload your completed Excel workbook to run instant validation checks before final submission to broker.'}
+                  : 'Upload your completed Excel workbook to run instant validation checks before final submission to LawtonAsia.'}
               </p>
             </div>
 
@@ -1443,7 +1443,7 @@ export default function MemberUpload({
                       <span>
                         {isSubmitting
                           ? (progressState?.message || 'Processing…')
-                          : (resolvedRole === 'broker' ? 'Submit & Process Members' : 'Submit to Broker')}
+                          : (resolvedRole === 'broker' ? 'Submit & Process Members' : 'Submit to LawtonAsia')}
                       </span>
                     </button>
                   ) : (
@@ -1616,7 +1616,7 @@ export default function MemberUpload({
                         ? (successModal.wasForceIngested 
                             ? 'Your spreadsheet has been submitted and member records were processed with fallback sanitization.'
                             : 'Your fresh spreadsheet has been submitted and approved.')
-                        : 'Your spreadsheet has been submitted successfully and queued for broker review.'}
+                        : 'Your spreadsheet has been submitted successfully and queued for LawtonAsia review.'}
                     </p>
 
                     {successModal.wasForceIngested && (

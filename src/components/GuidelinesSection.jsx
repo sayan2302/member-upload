@@ -15,7 +15,8 @@ import {
 } from './Icons.jsx'
 
 export function GuidelinesSection({ currentRole = 'hr' }) {
-  const [activeTab, setActiveTab] = useState(currentRole === 'broker' ? 'broker' : 'hr')
+  const isBroker = currentRole === 'broker'
+  const activeTab = isBroker ? 'broker' : 'hr'
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem('mayfair_accordion_guidelines_collapsed')
@@ -34,11 +35,6 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
       return next
     })
   }
-
-  // Sync tab with external role if changed
-  useEffect(() => {
-    setActiveTab(currentRole === 'broker' ? 'broker' : 'hr')
-  }, [currentRole])
 
   // Micro-animation auto-stepper for the live visual demonstration
   useEffect(() => {
@@ -76,7 +72,7 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
     {
       step: '4',
       title: 'Submit for Review',
-      subtitle: 'Once 0 errors remain, submit file for Broker underwriting review.',
+      subtitle: 'Once 0 errors remain, submit file for LawtonAsia underwriting review.',
       badge: 'Step 4',
       status: 'Approved',
       icon: <UploadCloudIcon size={20} />
@@ -95,7 +91,7 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
     {
       step: '2',
       title: '61-Column Auto-Expansion',
-      subtitle: 'Downloaded template expands with all broker underwriting fields pre-linked.',
+      subtitle: 'Downloaded template expands with all LawtonAsia underwriting fields pre-linked.',
       badge: 'Step 2',
       status: 'Expanded',
       icon: <ExcelFileIcon size={20} />
@@ -135,32 +131,21 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
         </div>
 
         <div className="guidelines-header-right">
-          {/* Role switcher tabs */}
-          <div className="guidelines-role-switcher" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'hr'}
-              className={`guidelines-tab-btn ${activeTab === 'hr' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveTab('hr')
-                setActiveStepIndex(0)
-              }}
-            >
-              <span>🏢 HR Guide</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'broker'}
-              className={`guidelines-tab-btn ${activeTab === 'broker' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveTab('broker')
-                setActiveStepIndex(0)
-              }}
-            >
-              <span>💼 Broker Guide</span>
-            </button>
+          {/* Role badge */}
+          <div className="guidelines-role-badge">
+            <span className="guide-active-role-pill" style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              padding: '4px 10px',
+              borderRadius: '6px',
+              background: isBroker ? '#e0f2fe' : '#f1f5f9',
+              color: isBroker ? '#0369a1' : '#334155',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}>
+              {isBroker ? '💼 LawtonAsia Guide' : '🏢 HR Guide'}
+            </span>
           </div>
 
           {/* Collapse Toggle */}
@@ -187,7 +172,7 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
               <div className="demo-header">
                 <div className="demo-header-title">
                   <span className="demo-live-dot" />
-                  <strong>Live Workflow Simulation:</strong> {activeTab === 'hr' ? 'HR File Upload & Validation Cycle' : 'Broker Review, Underwriting & Database Lock Lifecycle'}
+                  <strong>Live Workflow Simulation:</strong> {activeTab === 'hr' ? 'HR File Upload & Validation Cycle' : 'LawtonAsia Review, Underwriting & Database Lock Lifecycle'}
                 </div>
                 <div className="demo-step-tracker">
                   Active Step: <strong>{activeStepIndex + 1} / 4</strong>
@@ -276,13 +261,13 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Use 61-Column Schema:</strong> Fill broker underwriting fields (Policy Numbers, TPA details, Endorsement numbers, Premium amounts) in the expanded template.
+                          <strong>Use 61-Column Schema:</strong> Fill LawtonAsia underwriting fields (Policy Numbers, TPA details, Endorsement numbers, Premium amounts) in the expanded template.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Unlock If Not Proceeding:</strong> Click <code>Unlock</code> if you need to release the submission so other brokers can access it.
+                          <strong>Unlock If Not Proceeding:</strong> Click <code>Unlock</code> if you need to release the submission so other LawtonAsia team members can access it.
                         </div>
                       </li>
                       <li>
@@ -424,7 +409,7 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                     <div className="pitfall-card">
                       <div className="pitfall-badge">⚠️ Pitfall 1</div>
                       <h4>Concurrent Overwrite Conflict</h4>
-                      <p>Two brokers editing the same submission simultaneously can lead to lost underwriting work.</p>
+                      <p>Two LawtonAsia team members editing the same submission simultaneously can lead to lost underwriting work.</p>
                       <div className="pitfall-fix">
                         <strong>Fix:</strong> Always use <code>Download &amp; Lock</code> to guarantee exclusive editing rights.
                       </div>
@@ -433,7 +418,7 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                     <div className="pitfall-card">
                       <div className="pitfall-badge">⚠️ Pitfall 2</div>
                       <h4>Corrupted Schema Mapping</h4>
-                      <p>Deleting columns from the 61-column expanded broker template will cause server ingestion failure.</p>
+                      <p>Deleting columns from the 61-column expanded LawtonAsia template will cause server ingestion failure.</p>
                       <div className="pitfall-fix">
                         <strong>Fix:</strong> Keep all 61 columns intact; fill the required underwriting columns and leave optional ones blank.
                       </div>

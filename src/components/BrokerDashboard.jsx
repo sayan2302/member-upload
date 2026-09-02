@@ -163,7 +163,7 @@ export function BrokerDashboard({
     return {
       username: username || '—',
       email: email || '—',
-      roleTag: isBroker ? 'Broker' : 'HR',
+      roleTag: isBroker ? 'LawtonAsia' : 'HR',
     }
   }, [])
 
@@ -401,7 +401,13 @@ export function BrokerDashboard({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || `Rejection failed (${res.status})`)
+        const rawErr = errData.error || `Rejection failed (${res.status})`
+        const cleanErr = rawErr
+          .replace(/Cannot reject file: This submission is currently locked by (?:Broker \(ID: \d+\)|LawtonAsia \(ID: \d+\)|Broker|LawtonAsia)\. Only the locking (?:broker|team member) can reject this file\./gi, 'Cannot reject file: This submission is currently locked by LawtonAsia. Only the locking team member can reject this file.')
+          .replace(/Broker \(ID: \d+\)/gi, 'LawtonAsia')
+          .replace(/Broker/gi, 'LawtonAsia')
+          .replace(/broker/gi, 'LawtonAsia')
+        throw new Error(cleanErr)
       }
 
       const rejectedName = itemToReject.fileName
@@ -420,7 +426,7 @@ export function BrokerDashboard({
                   reason: selectedPresetReason,
                   comment: commentTrimmed,
                   rejectedAt: new Date().toISOString(),
-                  rejectedByEmail: userEmail || 'Broker Reviewer',
+                  rejectedByEmail: userEmail || 'LawtonAsia Reviewer',
                 },
               }
             : it
@@ -522,7 +528,7 @@ export function BrokerDashboard({
         <span 
           className={`history-badge is-rejected ${rejectionDetails ? 'has-feedback-trigger' : ''}`}
           style={{ background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5', cursor: rejectionDetails ? 'pointer' : 'default' }}
-          title={rejectionDetails ? "Click to view broker rejection comments" : "Submission rejected by broker"}
+          title={rejectionDetails ? "Click to view LawtonAsia rejection comments" : "Submission rejected by LawtonAsia"}
           onClick={() => {
             if (rejectionDetails) {
               setActiveFeedbackItem(rejectionDetails)
@@ -567,7 +573,7 @@ export function BrokerDashboard({
           <span 
             className="history-badge is-pending" 
             style={{ background: '#f1f5f9', color: '#64748b', borderColor: '#e2e8f0' }}
-            title={`Locked by ${lockedUserId}: Another broker is currently reviewing/editing this submission.`}
+            title={`Locked by LawtonAsia (${lockedUserId}): Another LawtonAsia team member is currently reviewing/editing this submission.`}
           >
             <LockIcon size={12} />
             <span>Locked by {lockedUserId}</span>
@@ -579,7 +585,7 @@ export function BrokerDashboard({
     return (
       <span 
         className="history-badge is-pending" 
-        title="Pending: Uploaded by HR, awaiting broker validation."
+        title="Pending: Uploaded by HR, awaiting LawtonAsia validation."
       >
         <ClockIcon size={12} />
         <span>Pending</span>
@@ -814,13 +820,13 @@ export function BrokerDashboard({
                             <InfoIcon size={13} />
                           </button>
                           <div className="status-popover-card">
-                            <div className="status-popover-header">Broker Status Guide</div>
+                            <div className="status-popover-header">LawtonAsia Status Guide</div>
                             
                             <div className="status-popover-item">
                               <span className="status-dot dot-pending" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Pending</div>
-                                <div className="status-popover-desc">Awaiting underwriting review (unclaimed by brokers).</div>
+                                <div className="status-popover-desc">Awaiting underwriting review (unclaimed by LawtonAsia).</div>
                               </div>
                             </div>
 
@@ -860,7 +866,7 @@ export function BrokerDashboard({
                               <span className="status-dot dot-revoked" />
                               <div className="status-popover-text">
                                 <div className="status-popover-label">Revoked</div>
-                                <div className="status-popover-desc">Revoked by HR prior to broker underwriting review.</div>
+                                <div className="status-popover-desc">Revoked by HR prior to LawtonAsia underwriting review.</div>
                               </div>
                             </div>
                           </div>
@@ -880,7 +886,7 @@ export function BrokerDashboard({
                             <InfoIcon size={13} />
                           </button>
                           <div className="status-popover-card popover-right" style={{ width: '300px' }}>
-                            <div className="status-popover-header">Broker Actions Guide</div>
+                            <div className="status-popover-header">LawtonAsia Actions Guide</div>
                             
                             <div className="status-popover-item">
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0e7ff', color: '#4f46e5', flexShrink: 0 }}>
@@ -898,7 +904,7 @@ export function BrokerDashboard({
                               </div>
                               <div className="status-popover-text">
                                 <div className="status-popover-label" style={{ color: '#d97706' }}>Release Lock</div>
-                                <div className="status-popover-desc">Release your lock to let other team brokers review.</div>
+                                <div className="status-popover-desc">Release your lock to let other LawtonAsia team members review.</div>
                               </div>
                             </div>
 
@@ -1100,13 +1106,13 @@ export function BrokerDashboard({
                                     type="button"
                                     className="broker-icon-btn btn-locked-other"
                                     disabled
-                                    aria-label={`Locked by Broker ${lockedUserId || item.lockedByUserId}`}
+                                    aria-label={`Locked by LawtonAsia ${lockedUserId || item.lockedByUserId}`}
                                   >
                                     <LockIcon size={14} />
                                   </button>
                                   <div className="broker-tooltip tooltip-right">
-                                    <span className="tooltip-title">Locked by Broker {lockedUserId || item.lockedByUserId}</span>
-                                    <span className="tooltip-desc">Currently claimed by another broker</span>
+                                    <span className="tooltip-title">Locked by LawtonAsia {lockedUserId || item.lockedByUserId}</span>
+                                    <span className="tooltip-desc">Currently claimed by another LawtonAsia team member</span>
                                   </div>
                                 </div>
                               )}
