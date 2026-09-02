@@ -923,6 +923,16 @@ export function BrokerDashboard({
                             </div>
 
                             <div className="status-popover-item">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#f0fdf4', color: '#16a34a', flexShrink: 0 }}>
+                                <DownloadIcon size={13} />
+                              </div>
+                              <div className="status-popover-text">
+                                <div className="status-popover-label" style={{ color: '#16a34a' }}>Download</div>
+                                <div className="status-popover-desc">Download original spreadsheet without claiming or altering lock.</div>
+                              </div>
+                            </div>
+
+                            <div className="status-popover-item">
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', flexShrink: 0 }}>
                                 <ClockIcon size={13} />
                               </div>

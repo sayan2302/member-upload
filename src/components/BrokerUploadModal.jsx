@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   CloseIcon,
   UploadCloudIcon,
@@ -48,6 +49,29 @@ export function BrokerUploadModal({
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const inputRef = useRef(null)
+
+  // Body scroll lock and Escape key listener
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showForceConfirmModal) {
+          setShowForceConfirmModal(false)
+          return
+        }
+        // Do not close modal if worksheet is currently fullscreen
+        if (document.querySelector('.validation-panel.is-fullscreen')) {
+          return
+        }
+        handleModalClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showForceConfirmModal])
 
   const selectFile = (selectedFile) => {
     if (!selectedFile) return
@@ -424,7 +448,7 @@ export function BrokerUploadModal({
     onClose()
   }
 
-  return (
+  const modalContent = (
     <div className="success-modal-overlay" role="dialog" aria-modal="true" style={{ alignItems: isFullscreen ? 'stretch' : 'center', padding: isFullscreen ? '20px' : '20px' }}>
       <div 
         className="success-modal-card" 
@@ -686,4 +710,10 @@ export function BrokerUploadModal({
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body)
+  }
+
+  return modalContent
 }

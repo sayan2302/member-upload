@@ -158,13 +158,17 @@ export function ValidationWorksheet({
       document.body.style.overflow = 'hidden'
       const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+          e.stopPropagation()
+          if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation()
+          }
           setIsFullscreen(false)
         }
       }
-      window.addEventListener('keydown', handleKeyDown)
+      window.addEventListener('keydown', handleKeyDown, true)
       return () => {
         document.body.style.overflow = ''
-        window.removeEventListener('keydown', handleKeyDown)
+        window.removeEventListener('keydown', handleKeyDown, true)
       }
     } else {
       document.body.style.overflow = ''
@@ -437,7 +441,7 @@ export function ValidationWorksheet({
                 top: `${pos.top}px`,
                 left: `${pos.left}px`,
                 transform: pos.openUpward ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
-                zIndex: 9999999,
+                zIndex: 2147483647,
                 pointerEvents: 'none',
               }}
             >
