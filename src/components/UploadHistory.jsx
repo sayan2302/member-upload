@@ -343,15 +343,15 @@ export function UploadHistory({
       )
     }
     const isLocked = Boolean(item && (item.isLocked || item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by))
-    if (role === 'broker' && isLocked) {
+    if (isLocked) {
+      const isBrokerRole = role === 'broker'
       return (
         <span 
-          className="history-badge is-pending" 
-          style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}
-          title="Locked: Under active LawtonAsia review"
+          className="history-badge is-locked" 
+          title={isBrokerRole ? "Locked: Under active LawtonAsia review" : "Locked: Under active LawtonAsia review (cannot be revoked)"}
         >
           <LockIcon size={12} />
-          <span>Locked</span>
+          <span>{isBrokerRole ? "Locked" : "Locked by LawtonAsia"}</span>
         </span>
       )
     }
@@ -394,7 +394,7 @@ export function UploadHistory({
       } else if (statusFilter === 'locked') {
         if (!isPendingState || !locked) return false
       } else if (statusFilter === 'pending') {
-        if (!isPendingState || (role === 'broker' && locked)) return false
+        if (!isPendingState || locked) return false
       } else if (statusFilter === 'revoked') {
         if (s !== 'revoked') return false
       }
@@ -692,7 +692,9 @@ export function UploadHistory({
               </tr>
             </thead>
             <tbody>
-              {sortedItems.map((item) => (
+              {sortedItems.map((item) => {
+                const isLocked = Boolean(item && (item.isLocked || item.lockedByUserId || item.locked_by_user_id || item.lockedBy || item.locked_by))
+                return (
                 <tr key={item.uuid}>
                   <td className="history-file-cell">
                     <div className="history-file-info">
@@ -722,8 +724,8 @@ export function UploadHistory({
                   <td className="history-status-cell">{getStatusBadge(item)}</td>
                   <td className="history-action-cell" style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                      {/* Delete / Revoke Button for HR */}
-                      {role === 'hr' && item.status !== 'approved' && item.status !== 'revoked' && item.status !== 'deleted' && item.status !== 'rejected' && (
+                      {/* Delete / Revoke Button for HR (hidden when locked by broker) */}
+                      {role === 'hr' && item.status !== 'approved' && item.status !== 'revoked' && item.status !== 'deleted' && item.status !== 'rejected' && !isLocked && (
                         <div className="broker-icon-btn-wrap">
                           <button
                             type="button"
@@ -787,7 +789,7 @@ export function UploadHistory({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

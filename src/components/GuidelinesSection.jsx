@@ -222,31 +222,43 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Use the Official Template:</strong> Always download and start from the standard Mayfair 33-column Excel template.
+                          <strong>Official Template:</strong> Download and use the template provided in Member data upload section.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Primary Member Relationship:</strong> Always set the main employee's relationship as <code>Self</code>.
+                          <strong>Primary Employee:</strong> Set primary employee relationship as "Insured". Every family must have exactly one Insured record.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Link Dependents Correctly:</strong> Dependents (Spouse, Child, Parent) must share the <strong>exact same Employee ID</strong> as their primary employee.
+                          <strong>Family Linking:</strong> Dependents (Spouse, Child, Parent) must share the exact same Employee ID as their Insured member.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Standard Date Formats:</strong> Enter dates as <code>DD/MM/YYYY</code> or <code>YYYY-MM-DD</code> (e.g. <code>15/08/1990</code>).
+                          <strong>Standard Dates:</strong> Enter dates in YYYY-MM-DD format (e.g. 1993-12-15).
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Review Worksheet Errors:</strong> Click red error cells in the interactive preview table to view instant tooltips detailing the exact fix.
+                          <strong>Validation Preview:</strong> Review highlighted cell errors in the interactive preview table before submitting.
+                        </div>
+                      </li>
+                      <li>
+                        <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
+                        <div>
+                          <strong>Submission Tracking:</strong> Monitor processing status and download historical records from the "Past Uploads" tab.
+                        </div>
+                      </li>
+                      <li>
+                        <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
+                        <div>
+                          <strong>Revoke File upload:</strong> Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.
                         </div>
                       </li>
                     </>
@@ -255,25 +267,31 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Lock Before Working:</strong> Always click <code>Download &amp; Lock</code> to claim exclusive review lock before making underwriting updates.
+                          <strong>Exclusive Lock:</strong> Click "Download &amp; Lock" on an HR submission to lock exclusive review and editing rights.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Use 61-Column Schema:</strong> Fill LawtonAsia underwriting fields (Policy Numbers, TPA details, Endorsement numbers, Premium amounts) in the expanded template.
+                          <strong>Column update:</strong> Fill all the required and mandatory fields, HR filled details will come pre-populated
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Unlock If Not Proceeding:</strong> Click <code>Unlock</code> if you need to release the submission so other LawtonAsia team members can access it.
+                          <strong>Prompt Unlock:</strong> Click "Unlock" if you are not proceeding, releasing the lock so team members can claim the file.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
                         <div>
-                          <strong>Verify Underwriting Preview:</strong> Review all 61 columns in the interactive preview before final approval and database commit.
+                          <strong>Rejection Feedback:</strong> When rejecting a file, select a categorized reason and provide clear comments for HR to fix.
+                        </div>
+                      </li>
+                      <li>
+                        <span className="bullet-pill is-do"><CheckIcon size={12} /></span>
+                        <div>
+                          <strong>Submit Data:</strong> Ensure all validation checks pass with 0 errors before final database save.
                         </div>
                       </li>
                     </>
@@ -295,31 +313,37 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Alter Header Names:</strong> Never rename, reorder, delete, or add extra column headers in the template.
+                          <strong>Template Structure:</strong> Do NOT rename, reorder, delete, or add custom column headers in the template.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Upload Orphan Dependents:</strong> Never upload a Spouse or Child row without a preceding or accompanying <code>Self</code> employee row.
+                          <strong>Dependents:</strong> Do NOT upload dependents without an accompanying Insured employee row sharing the same Employee ID.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Use Password Protection:</strong> Ensure the Excel spreadsheet is unprotected and not encrypted before upload.
+                          <strong>Invalid Dates:</strong> Do NOT use text or impossible dates like "31/02/2024" or "12th Jan 90".
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Leave Mandatory Fields Blank:</strong> Employee ID, Member Name, Relationship, Gender, and DOB must never be empty.
+                          <strong>Password Protection:</strong> Do NOT upload password-protected, encrypted, or corrupted Excel workbooks.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Use Invalid Calendar Dates:</strong> Avoid non-existent dates like <code>31/02/2024</code> or plain text in date columns.
+                          <strong>Trailing Spaces:</strong> Do NOT leave leading or trailing whitespace in Employee ID, Mobile Number, or Email fields.
+                        </div>
+                      </li>
+                      <li>
+                        <span className="bullet-pill is-dont"><XIcon size={12} /></span>
+                        <div>
+                          <strong>Duplicate Batches:</strong> Do NOT re-upload identical files while a previous submission is still pending LawtonAsia review.
                         </div>
                       </li>
                     </>
@@ -328,25 +352,31 @@ export function GuidelinesSection({ currentRole = 'hr' }) {
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Upload Without Locking:</strong> You cannot upload revised files until the submission is locked to your user account.
+                          <strong>No Unlocked Edits:</strong> Do NOT attempt to upload revised files without first claiming and locking the submission.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Modify RowId Identifiers:</strong> Do not change or remove the system-generated <code>RowId</code> or primary <code>Employee ID</code> keys.
+                          <strong>System Columns:</strong> Do NOT modify or delete system-generated RowId, Unique ID, or employee linkage columns.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Leave Submissions Locked Indefinitely:</strong> Release the lock promptly if you are not actively reviewing or uploading revisions.
+                          <strong>Lock Hoarding:</strong> Do NOT leave files locked indefinitely without active review or communication.
                         </div>
                       </li>
                       <li>
                         <span className="bullet-pill is-dont"><XIcon size={12} /></span>
                         <div>
-                          <strong>Do NOT Submit Unresolved Errors:</strong> Always rectify red cell validation warnings before committing records to the live database.
+                          <strong>Other LawtonAsia Files:</strong> Do NOT attempt to reject or overwrite files currently claimed and locked by another LawtonAsia team member.
+                        </div>
+                      </li>
+                      <li>
+                        <span className="bullet-pill is-dont"><XIcon size={12} /></span>
+                        <div>
+                          <strong>Unresolved Errors:</strong> Do NOT commit batches containing uncorrected validation errors into the live database.
                         </div>
                       </li>
                     </>

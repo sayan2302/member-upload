@@ -2868,6 +2868,12 @@ button {
   color: #92400e;
 }
 
+.history-badge.is-locked {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
 .history-badge.is-approved {
   background: #d1fae5;
   color: #065f46;
@@ -4839,58 +4845,187 @@ button {
 
 .rule-card {
   background: #ffffff;
-  border: 1.5px solid #94a3b8;
-  border-radius: 12px;
-  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02);
+  transition: box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .rule-card.is-do-card {
-  border-top: 4px solid #10b981;
-  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 50px);
+  border-top: 3.5px solid #10b981;
+  background: linear-gradient(180deg, #f8fdfa 0%, #ffffff 70px);
 }
 
 .rule-card.is-dont-card {
-  border-top: 4px solid #ef4444;
-  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 50px);
+  border-top: 3.5px solid #f43f5e;
+  background: linear-gradient(180deg, #fdf8f9 0%, #ffffff 70px);
 }
 
 .rule-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rule-header-left-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .rule-badge-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.rule-badge-icon.is-do { background: #dcfce7; color: #15803d; }
-.rule-badge-icon.is-dont { background: #fee2e2; color: #b91c1c; }
+.rule-badge-icon.is-do {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+}
+
+.rule-badge-icon.is-dont {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.12);
+}
 
 .rule-header-title {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 
-.rule-card-header.is-do .rule-header-title { color: #15803d; }
-.rule-card-header.is-dont .rule-header-title { color: #b91c1c; }
+.rule-card-header.is-do .rule-header-title { color: #065f46; }
+.rule-card-header.is-dont .rule-header-title { color: #9f1239; }
 
 .rule-header-subtitle {
-  font-size: 11.5px;
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
   color: #64748b;
+  font-weight: 400;
+  line-height: 1.35;
 }
 
+.rule-header-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rule-header-count.is-do {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.rule-header-count.is-dont {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+/* ── Interactive Rule Item Cards ──────────────────────────────────────── */
+.rule-items-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.rule-row-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 11px 14px;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.rule-row-card.is-do:hover {
+  background: #f9fefb;
+  border-color: #86efac;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.08);
+}
+
+.rule-row-card.is-dont:hover {
+  background: #fffafa;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.08);
+}
+
+.rule-item-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rule-item-status-icon.is-do {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #bbf7d0;
+}
+
+.rule-item-status-icon.is-dont {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.rule-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rule-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.rule-item-desc {
+  margin: 3px 0 0 0;
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* Fallback legacy list styles */
 .rule-list {
   list-style: none;
   margin: 0;
@@ -4925,14 +5060,10 @@ button {
 
 .rule-tag {
   display: inline-block;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: #475569;
-  background: #f1f5f9;
-  padding: 1px 6px;
-  border-radius: 4px;
+  color: #1e293b;
   margin-right: 6px;
-  text-transform: uppercase;
 }
 
 /* ── Troubleshooting Matrix ──────────────────────────────────────────────── */
@@ -5057,165 +5188,103 @@ button {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
-/* ── Dedicated Platform Guide Page (Separate Route / Tab) ────────────────── */
+/* ── Dedicated Platform Guide Page (Minimalist Header) ────────────────── */
 .guide-page-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.guide-page-topbar {
+.guide-minimal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
-  padding: 12px 18px;
+  padding: 18px 24px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.guide-topbar-meta {
+.guide-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guide-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.guide-doc-badge {
+.guide-minimal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.guide-minimal-role-pill {
   display: inline-flex;
   align-items: center;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  background: #eff6ff;
-  color: #1d4ed8;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  border: 1px solid #bfdbfe;
-}
-
-.guide-doc-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.guide-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.bc-muted {
-  color: #64748b;
-}
-
-.bc-sep {
-  color: #cbd5e1;
-}
-
-.bc-active {
-  color: #0f172a;
+  font-size: 11.5px;
   font-weight: 600;
+  padding: 2.5px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
 }
 
-.guide-back-btn {
+.guide-minimal-role-pill.is-hr {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.guide-minimal-role-pill.is-broker {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.guide-minimal-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.guide-minimal-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #f1f5f9;
+  gap: 5px;
+  background: #f8fafc;
   border: 1px solid #cbd5e1;
   color: #334155;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  white-space: nowrap;
+  line-height: 1;
 }
 
-.guide-back-btn:hover {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
-}
-
-.guide-hero-banner {
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-  border: 1px solid #dbeafe;
-  border-radius: 14px;
-  padding: 28px;
-  box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.08);
-}
-
-.guide-hero-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #2563eb;
-  background: #dbeafe;
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
-
-.guide-hero-title {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
-
-.guide-hero-desc {
-  margin: 0 0 20px 0;
-  font-size: 14px;
-  color: #475569;
-  max-width: 800px;
-  line-height: 1.5;
-}
-
-.guide-role-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.guide-role-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 18px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.guide-role-pill:hover {
-  background: #f8fafc;
+.guide-minimal-back-btn:hover {
+  background: #f1f5f9;
   color: #0f172a;
   border-color: #94a3b8;
+  transform: translateX(-1px);
 }
 
-.guide-role-pill.is-active {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+.guide-minimal-back-btn:active {
+  transform: translateX(-2px);
 }
 
 .guide-section {

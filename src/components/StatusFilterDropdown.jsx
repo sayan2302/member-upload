@@ -33,7 +33,7 @@ export function StatusFilterDropdown({
   const options = [
     { key: 'all', label: 'All Statuses' },
     { key: 'pending', label: 'Pending', dotClass: 'dot-pending' },
-    ...(isBroker ? [{ key: 'locked', label: 'Locked', dotClass: 'dot-locked' }] : []),
+    { key: 'locked', label: isBroker ? 'Locked' : 'Locked by LawtonAsia', dotClass: 'dot-locked' },
     { key: 'approved', label: 'Approved', dotClass: 'dot-approved' },
     { key: 'failed', label: 'Failed', dotClass: 'dot-failed' },
     { key: 'rejected', label: 'Rejected', dotClass: 'dot-rejected' },

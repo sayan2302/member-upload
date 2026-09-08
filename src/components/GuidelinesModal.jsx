@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BookOpenIcon,
   CheckIcon,
   XIcon,
-  CloseIcon,
-  LightbulbIcon
+  CloseIcon
 } from './Icons.jsx'
 
 export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
@@ -30,19 +30,18 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
   if (!isOpen) return null
 
   const hrDos = [
-    { cat: 'Official Template', text: 'Download and use the official 33-column Mayfair Excel template (.xlsx or .xls).' },
-    { cat: 'Primary Employee', text: 'Set primary employee relationship as "Self". Every family must have exactly one Self record.' },
-    { cat: 'Family Linking', text: 'Dependents (Spouse, Child, Parent) must share the exact same Employee ID as their primary employee.' },
-    { cat: 'Standard Dates', text: 'Enter dates in DD/MM/YYYY or YYYY-MM-DD standard format (e.g. 15/08/1990).' },
-    { cat: 'Sum Insured', text: 'Enter numeric Sum Insured matching approved corporate policy tiers (e.g. 500000 without commas or currency symbols).' },
+    { cat: 'Official Template', text: 'Download and use the template provided in Member data upload section.' },
+    { cat: 'Primary Employee', text: 'Set primary employee relationship as "Insured". Every family must have exactly one Insured record.' },
+    { cat: 'Family Linking', text: 'Dependents (Spouse, Child, Parent) must share the exact same Employee ID as their Insured member.' },
+    { cat: 'Standard Dates', text: 'Enter dates in YYYY-MM-DD format (e.g. 1993-12-15).' },
     { cat: 'Validation Preview', text: 'Review highlighted cell errors in the interactive preview table before submitting.' },
     { cat: 'Submission Tracking', text: 'Monitor processing status and download historical records from the "Past Uploads" tab.' },
-    { cat: 'Revoke Mistaken Uploads', text: 'Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.' }
+    { cat: 'Revoke File upload', text: 'Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.' }
   ]
 
   const hrDonts = [
     { cat: 'Template Structure', text: 'Do NOT rename, reorder, delete, or add custom column headers in the template.' },
-    { cat: 'Orphan Dependents', text: 'Do NOT upload orphan dependents without an accompanying Self employee row sharing the same Employee ID.' },
+    { cat: 'Dependents', text: 'Do NOT upload dependents without an accompanying Insured employee row sharing the same Employee ID.' },
     { cat: 'Invalid Dates', text: 'Do NOT use text or impossible dates like "31/02/2024" or "12th Jan 90".' },
     { cat: 'Password Protection', text: 'Do NOT upload password-protected, encrypted, or corrupted Excel workbooks.' },
     { cat: 'Trailing Spaces', text: 'Do NOT leave leading or trailing whitespace in Employee ID, Mobile Number, or Email fields.' },
@@ -51,11 +50,10 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
 
   const brokerDos = [
     { cat: 'Exclusive Lock', text: 'Click "Download & Lock" on an HR submission to lock exclusive review and editing rights.' },
-    { cat: '61-Column Schema', text: 'Use the expanded 61-column LawtonAsia template containing all 28 underwriting and TPA fields.' },
+    { cat: 'Column update', text: 'Fill all the required and mandatory fields, HR filled details will come pre-populated' },
     { cat: 'Prompt Unlock', text: 'Click "Unlock" if you are not proceeding, releasing the lock so team members can claim the file.' },
     { cat: 'Rejection Feedback', text: 'When rejecting a file, select a categorized reason and provide clear comments for HR to fix.' },
-    { cat: 'Policy Verification', text: 'Verify insurer policy numbers, TPA codes, and endorsement IDs before committing to the database.' },
-    { cat: 'Clean Database Commit', text: 'Ensure all validation checks pass with 0 errors before final database save.' }
+    { cat: 'Submit Data', text: 'Ensure all validation checks pass with 0 errors before final database save.' }
   ]
 
   const brokerDonts = [
@@ -69,7 +67,7 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
   const currentDos = activeTab === 'hr' ? hrDos : brokerDos
   const currentDonts = activeTab === 'hr' ? hrDonts : brokerDonts
 
-  return (
+  const modalContent = (
     <div className="guidelines-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div 
         className="guidelines-modal-window" 
@@ -107,7 +105,7 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
                 alignItems: 'center',
                 gap: '5px'
               }}>
-                {isBroker ? '💼 LawtonAsia Underwriter' : '🏢 HR Administrator'}
+                {isBroker ? '💼 LawtonAsia' : '🏢 HR'}
               </span>
             </div>
 
@@ -133,45 +131,53 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
             {/* DO'S */}
             <div className="rule-card is-do-card">
               <div className="rule-card-header is-do">
-                <div className="rule-badge-icon is-do"><CheckIcon size={16} /></div>
-                <div>
-                  <h3 className="rule-header-title">DO'S — Recommended &amp; Mandatory</h3>
-                  <span className="rule-header-subtitle">Essential requirements for error-free enrollment</span>
+                <div className="rule-header-left-wrap">
+                  <div className="rule-badge-icon is-do"><CheckIcon size={16} /></div>
+                  <div>
+                    <h3 className="rule-header-title">DO'S — Recommended &amp; Mandatory Standards</h3>
+                    <span className="rule-header-subtitle">Essential requirements for clean, error-free processing</span>
+                  </div>
                 </div>
               </div>
-              <ul className="rule-list">
+              <div className="rule-items-grid">
                 {currentDos.map((item, idx) => (
-                  <li key={idx}>
-                    <span className="rule-bullet is-do"><CheckIcon size={11} /></span>
-                    <div className="rule-text">
-                      <span className="rule-tag">{item.cat}</span>
-                      {item.text}
+                  <div className="rule-row-card is-do" key={idx}>
+                    <div className="rule-item-status-icon is-do">
+                      <CheckIcon size={13} />
                     </div>
-                  </li>
+                    <div className="rule-item-body">
+                      <div className="rule-item-title">{item.cat}</div>
+                      <p className="rule-item-desc">{item.text}</p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
             {/* DON'TS */}
             <div className="rule-card is-dont-card">
               <div className="rule-card-header is-dont">
-                <div className="rule-badge-icon is-dont"><XIcon size={16} /></div>
-                <div>
-                  <h3 className="rule-header-title">DON'TS — Prohibitions</h3>
-                  <span className="rule-header-subtitle">Critical actions that cause validation failures</span>
+                <div className="rule-header-left-wrap">
+                  <div className="rule-badge-icon is-dont"><XIcon size={16} /></div>
+                  <div>
+                    <h3 className="rule-header-title">DON'TS — Prohibitions &amp; Common Pitfalls</h3>
+                    <span className="rule-header-subtitle">Actions that cause validation failures or data rejections</span>
+                  </div>
                 </div>
               </div>
-              <ul className="rule-list">
+              <div className="rule-items-grid">
                 {currentDonts.map((item, idx) => (
-                  <li key={idx}>
-                    <span className="rule-bullet is-dont"><XIcon size={11} /></span>
-                    <div className="rule-text">
-                      <span className="rule-tag">{item.cat}</span>
-                      {item.text}
+                  <div className="rule-row-card is-dont" key={idx}>
+                    <div className="rule-item-status-icon is-dont">
+                      <XIcon size={13} />
                     </div>
-                  </li>
+                    <div className="rule-item-body">
+                      <div className="rule-item-title">{item.cat}</div>
+                      <p className="rule-item-desc">{item.text}</p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
           </div>
@@ -179,11 +185,7 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
         </div>
 
         {/* Modal Sticky Footer */}
-        <div className="guidelines-modal-footer" style={{ padding: '12px 20px' }}>
-          <div className="footer-left">
-            <LightbulbIcon size={15} />
-            <span style={{ fontSize: '12px' }}>Need assistance with data formatting? Contact <strong>support@mayfair.com</strong></span>
-          </div>
+        <div className="guidelines-modal-footer" style={{ padding: '12px 20px', display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" className="modal-primary-close-btn" onClick={onClose} style={{ padding: '6px 16px', fontSize: '13px' }}>
             Close Documentation
           </button>
@@ -192,4 +194,10 @@ export function GuidelinesModal({ isOpen, onClose, currentRole = 'hr' }) {
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body)
+  }
+
+  return modalContent
 }

@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react'
 import {
-  BookOpenIcon,
   CheckIcon,
-  XIcon,
-  BuildingIcon
+  XIcon
 } from './Icons.jsx'
 
 export function PlatformGuidePage({ 
@@ -14,19 +11,18 @@ export function PlatformGuidePage({
   const activeRole = isBroker ? 'broker' : 'hr'
 
   const hrDos = [
-    { cat: 'Official Template', text: 'Download and use the official 33-column Mayfair Excel template (.xlsx or .xls).' },
-    { cat: 'Primary Employee', text: 'Set primary employee relationship as "Self". Every family must have exactly one Self record.' },
-    { cat: 'Family Linking', text: 'Dependents (Spouse, Child, Parent) must share the exact same Employee ID as their primary employee.' },
-    { cat: 'Standard Dates', text: 'Enter dates in DD/MM/YYYY or YYYY-MM-DD standard format (e.g. 15/08/1990).' },
-    { cat: 'Sum Insured', text: 'Enter numeric Sum Insured matching approved corporate policy tiers (e.g. 500000 without commas or currency symbols).' },
+    { cat: 'Official Template', text: 'Download and use the template provided in Member data upload section.' },
+    { cat: 'Primary Employee', text: 'Set primary employee relationship as "Insured". Every family must have exactly one Insured record.' },
+    { cat: 'Family Linking', text: 'Dependents (Spouse, Child, Parent) must share the exact same Employee ID as their Insured member.' },
+    { cat: 'Standard Dates', text: 'Enter dates in YYYY-MM-DD format (e.g. 1993-12-15).' },
     { cat: 'Validation Preview', text: 'Review highlighted cell errors in the interactive preview table before submitting.' },
     { cat: 'Submission Tracking', text: 'Monitor processing status and download historical records from the "Past Uploads" tab.' },
-    { cat: 'Revoke Mistaken Uploads', text: 'Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.' }
+    { cat: 'Revoke File upload', text: 'Use the "Revoke" button to recall mistakenly uploaded files before LawtonAsia locks them.' }
   ]
 
   const hrDonts = [
     { cat: 'Template Structure', text: 'Do NOT rename, reorder, delete, or add custom column headers in the template.' },
-    { cat: 'Orphan Dependents', text: 'Do NOT upload orphan dependents without an accompanying Self employee row sharing the same Employee ID.' },
+    { cat: 'Dependents', text: 'Do NOT upload dependents without an accompanying Insured employee row sharing the same Employee ID.' },
     { cat: 'Invalid Dates', text: 'Do NOT use text or impossible dates like "31/02/2024" or "12th Jan 90".' },
     { cat: 'Password Protection', text: 'Do NOT upload password-protected, encrypted, or corrupted Excel workbooks.' },
     { cat: 'Trailing Spaces', text: 'Do NOT leave leading or trailing whitespace in Employee ID, Mobile Number, or Email fields.' },
@@ -35,11 +31,10 @@ export function PlatformGuidePage({
 
   const brokerDos = [
     { cat: 'Exclusive Lock', text: 'Click "Download & Lock" on an HR submission to lock exclusive review and editing rights.' },
-    { cat: '61-Column Schema', text: 'Use the expanded 61-column LawtonAsia template containing all 28 underwriting and TPA fields.' },
+    { cat: 'Column update', text: 'Fill all the required and mandatory fields, HR filled details will come pre-populated' },
     { cat: 'Prompt Unlock', text: 'Click "Unlock" if you are not proceeding, releasing the lock so team members can claim the file.' },
     { cat: 'Rejection Feedback', text: 'When rejecting a file, select a categorized reason and provide clear comments for HR to fix.' },
-    { cat: 'Policy Verification', text: 'Verify insurer policy numbers, TPA codes, and endorsement IDs before committing to the database.' },
-    { cat: 'Clean Database Commit', text: 'Ensure all validation checks pass with 0 errors before final database save.' }
+    { cat: 'Submit Data', text: 'Ensure all validation checks pass with 0 errors before final database save.' }
   ]
 
   const brokerDonts = [
@@ -55,100 +50,105 @@ export function PlatformGuidePage({
 
   return (
     <div className="guide-page-container">
-      {/* Top Navigation & Action Bar */}
-      <div className="guide-page-topbar">
-        <div className="guide-topbar-meta">
-          <span className="guide-doc-badge">DOCUMENTATION</span>
-          <span className="guide-doc-title">Platform Guidelines &amp; Operating Rules</span>
-        </div>
-
-        {onBackToUpload && (
-          <button 
-            type="button" 
-            className="guide-back-btn" 
-            onClick={onBackToUpload}
-          >
-            ← {activeRole === 'broker' ? 'Back to Dashboard' : 'Back to Upload Portal'}
-          </button>
-        )}
-      </div>
-
-      {/* Hero Header Section */}
-      <div className="guide-hero-banner" style={{ padding: '24px 28px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-        <div className="guide-hero-content">
-          <h1 className="guide-hero-title" style={{ fontSize: '20px', color: '#0f172a', marginBottom: '6px' }}>
-            Enrollment Rules &amp; Guidelines Documentation
-          </h1>
-          <p className="guide-hero-desc" style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' }}>
-            Mandatory standards and prohibited actions to ensure error-free member data uploads and underwriting processing.
-          </p>
-
-          {/* Role Badge Indicator */}
-          <div className="guide-role-selector" style={{ marginTop: '0' }}>
-            <div className="guide-role-pill is-active" style={{ cursor: 'default' }}>
-              {isBroker ? '💼 LawtonAsia Underwriter Guidelines' : '🏢 HR Administrator Guidelines'}
-            </div>
+      {/* Sleek Minimalist Header */}
+      <div className="guide-minimal-header">
+        <div className="guide-header-left">
+          <div className="guide-title-row">
+            {onBackToUpload && (
+              <button 
+                type="button" 
+                className="guide-minimal-back-btn" 
+                onClick={onBackToUpload}
+                aria-label="Back"
+              >
+                <svg 
+                  width="13" 
+                  height="13" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+                <span>Back</span>
+              </button>
+            )}
+            <h1 className="guide-minimal-title">
+              Guidelines &amp; Operating Rules
+            </h1>
+            <span className={`guide-minimal-role-pill ${isBroker ? 'is-broker' : 'is-hr'}`}>
+              {isBroker ? 'LawtonAsia' : 'HR'}
+            </span>
           </div>
+          <p className="guide-minimal-desc">
+            Mandatory standards and prohibited actions to ensure error-free member enrollment.
+          </p>
         </div>
       </div>
 
       {/* Do's & Don'ts Documentation Section */}
-      <section className="guide-section" style={{ padding: '24px 0', border: 'none' }} aria-label="Mandatory Standards and Prohibitions">
+      <section className="guide-section" style={{ padding: '0', border: 'none', background: 'transparent' }} aria-label="Mandatory Standards and Prohibitions">
         <div className="dos-donts-split-container">
           
           {/* DO'S CARD */}
           <div className="rule-card is-do-card">
             <div className="rule-card-header is-do">
-              <div className="rule-badge-icon is-do"><CheckIcon size={16} /></div>
-              <div>
-                <h3 className="rule-header-title">DO'S — Recommended &amp; Mandatory Standards</h3>
-                <span className="rule-header-subtitle">Essential requirements for clean, error-free processing</span>
+              <div className="rule-header-left-wrap">
+                <div className="rule-badge-icon is-do"><CheckIcon size={16} /></div>
+                <div>
+                  <h3 className="rule-header-title">DO'S — Recommended &amp; Mandatory Standards</h3>
+                  <span className="rule-header-subtitle">Essential requirements for clean, error-free processing</span>
+                </div>
               </div>
             </div>
-            <ul className="rule-list">
+            <div className="rule-items-grid">
               {currentDos.map((item, idx) => (
-                <li key={idx}>
-                  <span className="rule-bullet is-do"><CheckIcon size={11} /></span>
-                  <div className="rule-text">
-                    <span className="rule-tag">{item.cat}</span>
-                    {item.text}
+                <div className="rule-row-card is-do" key={idx}>
+                  <div className="rule-item-status-icon is-do">
+                    <CheckIcon size={13} />
                   </div>
-                </li>
+                  <div className="rule-item-body">
+                    <div className="rule-item-title">{item.cat}</div>
+                    <p className="rule-item-desc">{item.text}</p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
 
           {/* DON'TS CARD */}
           <div className="rule-card is-dont-card">
             <div className="rule-card-header is-dont">
-              <div className="rule-badge-icon is-dont"><XIcon size={16} /></div>
-              <div>
-                <h3 className="rule-header-title">DON'TS — Prohibitions &amp; Common Pitfalls</h3>
-                <span className="rule-header-subtitle">Actions that cause validation failures or data rejections</span>
+              <div className="rule-header-left-wrap">
+                <div className="rule-badge-icon is-dont"><XIcon size={16} /></div>
+                <div>
+                  <h3 className="rule-header-title">DON'TS — Prohibitions &amp; Common Pitfalls</h3>
+                  <span className="rule-header-subtitle">Actions that cause validation failures or data rejections</span>
+                </div>
               </div>
             </div>
-            <ul className="rule-list">
+            <div className="rule-items-grid">
               {currentDonts.map((item, idx) => (
-                <li key={idx}>
-                  <span className="rule-bullet is-dont"><XIcon size={11} /></span>
-                  <div className="rule-text">
-                    <span className="rule-tag">{item.cat}</span>
-                    {item.text}
+                <div className="rule-row-card is-dont" key={idx}>
+                  <div className="rule-item-status-icon is-dont">
+                    <XIcon size={13} />
                   </div>
-                </li>
+                  <div className="rule-item-body">
+                    <div className="rule-item-title">{item.cat}</div>
+                    <p className="rule-item-desc">{item.text}</p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
 
         </div>
       </section>
-
-      {/* Minimal Footer */}
-      <div className="guide-page-footer" style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '12px', color: '#64748b' }}>
-          Need assistance with custom corporate plan mapping? Contact <strong>support@mayfair.com</strong>
-        </span>
-      </div>
     </div>
   )
 }
