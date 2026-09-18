@@ -21,14 +21,30 @@ export function excelSerialToDateString(serial) {
  * Checks if a column name represents a date field
  */
 export function isDateColumnName(colName = '') {
-  const nameStr = String(colName).toLowerCase();
+  if (!colName) return false;
+  const nameStr = String(colName).toLowerCase().trim();
+
+  // If column explicitly indicates an ID, code, phone, number, salary, amount, etc.,
+  // it is NOT a date column unless it explicitly mentions "date" or "dob"
+  const isIdOrNumber = (
+    /\b(no|no\.|number|num|id|code|mobile|phone|passport|staff|salary|amount|fee|premium|sum|limit|age|count|percent|percentage)\b/i.test(nameStr) ||
+    nameStr.includes('member no') ||
+    nameStr.includes('id no') ||
+    nameStr.includes('policy no')
+  );
+
+  const hasExplicitDateWord = /\b(date|dob)\b/i.test(nameStr);
+
+  if (isIdOrNumber && !hasExplicitDateWord) {
+    return false;
+  }
+
   return (
-    nameStr.includes('date') ||
-    nameStr.includes('dob') ||
-    nameStr.includes('effective') ||
-    nameStr.includes('expiry') ||
-    nameStr.includes('entry') ||
-    nameStr.includes('birth')
+    hasExplicitDateWord ||
+    /\b(effective|expiry|commencement)\b/i.test(nameStr) ||
+    nameStr.includes('date of birth') ||
+    nameStr.includes('birth date') ||
+    nameStr.includes('original entry')
   );
 }
 
@@ -54,9 +70,12 @@ export function formatCellDisplayValue(val, colName = '') {
   }
 
   // Handle numeric Excel serial dates (e.g. 38936 -> "2006-08-07")
-  if (/^\d{4,5}(\.\d+)?$/.test(strVal)) {
+  // CRITICAL: Only convert numeric serials if the column is a confirmed date column!
+  // Non-date columns like "PIH Member No." or "Staff ID No." can contain numeric IDs (e.g. 15208, 16945)
+  // which must never be converted into dates.
+  if (isDateColumnName(colName) && /^\d{4,5}(\.\d+)?$/.test(strVal)) {
     const num = Number(strVal);
-    if (isDateColumnName(colName) || (num >= 1000 && num <= 100000 && Number.isInteger(num))) {
+    if (num >= 1000 && num <= 100000) {
       const parsedDate = excelSerialToDateString(num);
       if (parsedDate) return parsedDate;
     }
@@ -115,7 +134,7 @@ function extractCellValue(cell, colName = '') {
   // 3. Formatted cell text from Excel
   if (cell.text && typeof cell.text === 'string' && cell.text.trim()) {
     const textVal = cell.text.trim();
-    if (/^\d{4,5}(\.\d+)?$/.test(textVal)) {
+    if (isDateColumnName(colName) && /^\d{4,5}(\.\d+)?$/.test(textVal)) {
       const parsed = formatCellDisplayValue(textVal, colName);
       if (parsed) return parsed;
     }

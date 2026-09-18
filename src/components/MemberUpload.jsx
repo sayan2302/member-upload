@@ -515,24 +515,27 @@ export default function MemberUpload({
           { id: '1422104', name: 'Bangkok Patana School' },
           { id: '1422135', name: 'A3 Test industries' },
           { id: '1422138', name: 'ELTS Corporate' },
+          { id: '1422140', name: 'ESPN Tech Solutions' },
         ]
-      : [{ id: defaultCorpId, name: 'ELTS Corporate' }]
+      : [{ id: defaultCorpId, name: 'ELTS Corporate' }, { id: '1422140', name: 'ESPN Tech Solutions' }]
   })
 
   const [policies, setPolicies] = useState(() => {
     if (Array.isArray(initialPolicies) && initialPolicies.length > 0) return initialPolicies
     return resolvedRole === 'broker'
       ? [
-          { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
-          { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
-          { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
-          { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', policy_name: 'Group Health Standard', corp_id: '1422135' },
-          { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+          { id: '411932', pol_id: '411932', policy_no: 'TBA/BPS/LOCAL/26', insurer_policy_number: 'BPS_Local_OP_16022026', internal_policy_number: 'TBA/BPS/LOCAL/26', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
+          { id: '411933', pol_id: '411933', policy_no: 'TBA/BPS/TOPUP/26', insurer_policy_number: 'BPS_Local_TOPUP_16022026', internal_policy_number: 'TBA/BPS/TOPUP/26', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
+          { id: '411934', pol_id: '411934', policy_no: 'TBA/BPS/HS/26', insurer_policy_number: 'HS256576', internal_policy_number: 'TBA/BPS/HS/26', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+          { id: '412849', pol_id: '412849', policy_no: 'TBA/A3/HEALTH/26', insurer_policy_number: '900010062026_J10', internal_policy_number: 'TBA/A3/HEALTH/26', policy_name: 'Group Health Standard', corp_id: '1422135' },
+          { id: '412854', pol_id: '412854', policy_no: 'TBA/ELTS/CARE/26', insurer_policy_number: 'EL_97238928391606', internal_policy_number: 'TBA/ELTS/CARE/26', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+          { id: '973874878387438', pol_id: '973874878387438', policy_no: '973874878387438', insurer_policy_number: 'INS_6387686843', internal_policy_number: '973874878387438', policy_name: 'Corporate Health Plan', corp_id: '1422140' },
         ]
       : [
-          { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: defaultCorpId },
-          { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: defaultCorpId },
-          { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: defaultCorpId },
+          { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', insurer_policy_number: 'BPS_Local_OP_16022026', internal_policy_number: 'TBA/BPS/LOCAL/26', policy_name: 'Local Outpatient Plan', corp_id: defaultCorpId },
+          { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', insurer_policy_number: 'BPS_Local_TOPUP_16022026', internal_policy_number: 'TBA/BPS/TOPUP/26', policy_name: 'Local Top-up Plan', corp_id: defaultCorpId },
+          { id: '411934', pol_id: '411934', policy_no: 'HS256576', insurer_policy_number: 'HS256576', internal_policy_number: 'TBA/BPS/HS/26', policy_name: 'Hospital & Surgical', corp_id: defaultCorpId },
+          { id: '973874878387438', pol_id: '973874878387438', policy_no: 'INS_6387686843', insurer_policy_number: 'INS_6387686843', internal_policy_number: '973874878387438', policy_name: 'Corporate Health Plan', corp_id: '1422140' },
         ]
   })
 
@@ -720,6 +723,7 @@ export default function MemberUpload({
       .then((data) => {
         if (data && data.success) {
           if (Array.isArray(data.corporates) && data.corporates.length > 0) setCorporates(data.corporates)
+          if (Array.isArray(data.policies) && data.policies.length > 0) setPolicies(data.policies)
         }
       })
       .catch((err) => console.warn('[MemberUpload] Could not fetch options from server', err))
@@ -1547,7 +1551,7 @@ export default function MemberUpload({
                         <span className="force-stat-value">{validationSummary?.acceptedRows || 0}</span>
                       </div>
                       <div className="force-stat-box is-faulty">
-                        <span className="force-stat-label">Faulty Rows</span>
+                        <span className="force-stat-label">Rejected Rows</span>
                         <span className="force-stat-value">{validationSummary?.rejectedCount || 0}</span>
                       </div>
                     </div>
@@ -1555,7 +1559,7 @@ export default function MemberUpload({
                     <div className="force-modal-notice-box">
                       <AlertTriangleIcon size={16} />
                       <span>
-                        <strong>Important:</strong> 100% of rows will be processed and enrolled. Unparseable dates and malformed values will be converted to safe fallbacks and tagged in the audit trail.
+                        <strong>Important:</strong> Uploading file with errors to process every row, including those with errors. By forcing this upload, only valid rows will be processed and added to the system; rows containing errors will be skipped.
                       </span>
                     </div>
 

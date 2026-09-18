@@ -651,7 +651,7 @@ export function BrokerUploadModal({
                     <span className="force-stat-value">{validationSummary?.acceptedRows || 0}</span>
                   </div>
                   <div className="force-stat-box is-faulty">
-                    <span className="force-stat-label">Faulty Rows</span>
+                    <span className="force-stat-label">Rejected Rows</span>
                     <span className="force-stat-value">{validationSummary?.rejectedCount || 0}</span>
                   </div>
                 </div>
@@ -659,7 +659,7 @@ export function BrokerUploadModal({
                 <div className="force-modal-notice-box">
                   <AlertTriangleIcon size={16} />
                   <span>
-                    <strong>Important:</strong> 100% of revised rows will be processed and enrolled. Unparseable dates and malformed values will be converted to safe fallbacks and tagged in the audit trail.
+                    <strong>Important:</strong> Uploading file with errors to process every row, including those with errors. By forcing this upload, only valid rows will be processed and added to the system; rows containing errors will be skipped.
                   </span>
                 </div>
 

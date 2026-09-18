@@ -26,7 +26,6 @@ import {
   DatabaseIcon,
   MaximizeIcon,
   MinimizeIcon,
-  BuildingIcon,
   RefreshCwIcon,
   LayersIcon,
   FilterErrorIcon,
@@ -105,6 +104,20 @@ export function getActorIdentity(actorObj, fileInfo = {}) {
     email: email !== name ? email : '',
     role: String(role).toUpperCase()
   }
+}
+
+export function formatAuditActionCode(code) {
+  if (!code) return ''
+  return String(code)
+    .replace(/^BROKER_/i, 'LAWTONASIA_')
+    .replace(/_BROKER_/i, '_LAWTONASIA_')
+}
+
+export function formatAuditActionTitle(title, code) {
+  if (title) {
+    return String(title).replace(/\bBroker\b/gi, 'LawtonAsia')
+  }
+  return formatAuditActionCode(code).replace(/_/g, ' ')
 }
 
 export function AuditConsoleLoader({ fileUuid }) {
@@ -519,11 +532,6 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
         </div>
 
         <div className="audit-header-meta">
-          <div className="audit-meta-stat" title="Corporate ID">
-            <BuildingIcon size={13} className="meta-stat-icon" />
-            <span className="meta-stat-label">Corporate ID</span>
-            <span className="meta-stat-val">{fileInfo.corp_id || 'N/A'}</span>
-          </div>
           <div className="audit-meta-stat" title="Upload Cycles">
             <RefreshCwIcon size={13} className="meta-stat-icon" />
             <span className="meta-stat-label">Cycles</span>
@@ -601,7 +609,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                                     {formatAuditTimestamp(sub.timestamp, { includeSeconds: true })}
                                   </span>
                                 </div>
-                                <div className="substep-title">{sub.action_title || sub.action_code}</div>
+                                <div className="substep-title">{formatAuditActionTitle(sub.action_title, sub.action_code)}</div>
                                 {isSubCancelled && (
                                   <div className="substep-cancel-hint">
                                     Session discarded before commit
@@ -643,10 +651,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                       <span className="breadcrumb-dot">•</span>
                       <span className="breadcrumb-tag is-step">Step {activeTx.sub_seq || '1.1'}</span>
                     </div>
-                    <h2 className="event-main-title">{activeTx.action_title || activeTx.action_code}</h2>
-                    <div className="event-action-code-row">
-                      <span className="event-code-badge">action_code: {activeTx.action_code}</span>
-                    </div>
+                    <h2 className="event-main-title">{formatAuditActionTitle(activeTx.action_title, activeTx.action_code)}</h2>
                   </div>
 
                   {(() => {
@@ -707,7 +712,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     <div className="callout-icon"><ZapIcon size={16} /></div>
                     <div className="callout-body">
                       <strong>Force Ingestion Executed:</strong>
-                      <p>LawtonAsia bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} faulty record(s)</strong> with fallback sanitization.</p>
+                      <p>LawtonAsia bypassed validation and force-ingested <strong>{activeTx.bypassed_errors_count || 1} record(s) with errors</strong>.</p>
                     </div>
                   </div>
                 )}
@@ -747,7 +752,7 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                     </span>
                     <span className={`sheet-stat-chip ${displayFaultyRows > 0 ? 'is-faulty' : ''}`}>
                       <AlertTriangleIcon size={12} style={{ color: displayFaultyRows > 0 ? '#dc2626' : 'currentColor' }} />
-                      <span>Faulty Rows: {displayFaultyRows}</span>
+                      <span>Rejected Rows: {displayFaultyRows}</span>
                     </span>
                   </div>
 
@@ -757,12 +762,12 @@ export function FileAuditConsole({ fileUuid, role, onBack, apiConfig }) {
                         type="button"
                         className={`toolbar-btn ${errorsOnly ? 'is-active' : ''}`}
                         onClick={() => setErrorsOnly(!errorsOnly)}
-                        aria-label={errorsOnly ? 'Showing Faulty Rows Only' : 'Filter Faulty Rows Only'}
+                        aria-label={errorsOnly ? 'Showing Rejected Rows Only' : 'Filter Rejected Rows Only'}
                       >
                         <AlertTriangleIcon size={14} style={{ color: errorsOnly ? '#ffffff' : '#dc2626' }} />
                       </button>
                       <div className="broker-tooltip">
-                        <span className="tooltip-title">{errorsOnly ? 'Show All Rows' : 'Filter Faulty Only'}</span>
+                        <span className="tooltip-title">{errorsOnly ? 'Show All Rows' : 'Filter Rejected Only'}</span>
                         <span className="tooltip-desc">{errorsOnly ? 'Display all member records' : 'Display only rows with validation errors'}</span>
                       </div>
                     </div>
@@ -942,7 +947,7 @@ function HistoricalWorksheetTable({
             {isLegacy ? <InfoIcon size={22} /> : <CheckIcon size={22} />}
           </div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-            {isLegacy ? 'Summary-Level Error Record' : 'Zero Faulty Rows in This Snapshot'}
+            {isLegacy ? 'Summary-Level Error Record' : 'Zero Rejected Rows in This Snapshot'}
           </div>
           <div style={{ fontSize: '13px', color: '#64748b', maxWidth: '440px', margin: '0 auto', lineHeight: '1.5' }}>
             {isLegacy
@@ -985,7 +990,7 @@ function HistoricalWorksheetTable({
                       background: !hasErrors ? '#d1fae5' : '#fee2e2',
                       color: !hasErrors ? '#065f46' : '#991b1b',
                     }}>
-                      {hasErrors ? 'FAULTY' : 'VALID'}
+                      {hasErrors ? 'REJECTED' : 'VALID'}
                     </span>
                   </td>
                   {colKeys.map((col) => {

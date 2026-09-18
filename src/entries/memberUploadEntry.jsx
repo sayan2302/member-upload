@@ -47,15 +47,15 @@ function DevApp() {
 
   let mockCorporates = [{ id: '1422104', name: 'Bangkok Patana School' }]
   let mockPolicies = [
-    { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
-    { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
-    { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
-    { id: '411935', pol_id: '411935', policy_no: 'DEN_BPS_2026_01', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
-    { id: '411936', pol_id: '411936', policy_no: 'MAT_BPS_2026_02', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
-    { id: '411937', pol_id: '411937', policy_no: 'VIS_BPS_2026_03', policy_name: 'Vision Care Standard', corp_id: '1422104' },
-    { id: '411938', pol_id: '411938', policy_no: 'LIFE_BPS_2026_04', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
-    { id: '411939', pol_id: '411939', policy_no: 'PA_BPS_2026_05', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
-    { id: '411940', pol_id: '411940', policy_no: 'CI_BPS_2026_06', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
+    { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', insurer_policy_number: 'BPS_Local_OP_16022026', internal_policy_number: 'TBA/BPS/LOCAL/26', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
+    { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', insurer_policy_number: 'BPS_Local_TOPUP_16022026', internal_policy_number: 'TBA/BPS/TOPUP/26', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
+    { id: '411934', pol_id: '411934', policy_no: 'HS256576', insurer_policy_number: 'HS256576', internal_policy_number: 'TBA/BPS/HS/26', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+    { id: '411935', pol_id: '411935', policy_no: 'DEN_BPS_2026_01', insurer_policy_number: 'DEN_BPS_2026_01', internal_policy_number: 'TBA/BPS/DEN/26', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
+    { id: '411936', pol_id: '411936', policy_no: 'MAT_BPS_2026_02', insurer_policy_number: 'MAT_BPS_2026_02', internal_policy_number: 'TBA/BPS/MAT/26', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
+    { id: '411937', pol_id: '411937', policy_no: 'VIS_BPS_2026_03', insurer_policy_number: 'VIS_BPS_2026_03', internal_policy_number: 'TBA/BPS/VIS/26', policy_name: 'Vision Care Standard', corp_id: '1422104' },
+    { id: '411938', pol_id: '411938', policy_no: 'LIFE_BPS_2026_04', insurer_policy_number: 'LIFE_BPS_2026_04', internal_policy_number: 'TBA/BPS/LIFE/26', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
+    { id: '411939', pol_id: '411939', policy_no: 'PA_BPS_2026_05', insurer_policy_number: 'PA_BPS_2026_05', internal_policy_number: 'TBA/BPS/PA/26', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
+    { id: '411940', pol_id: '411940', policy_no: 'CI_BPS_2026_06', insurer_policy_number: 'CI_BPS_2026_06', internal_policy_number: 'TBA/BPS/CI/26', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
   ]
 
   if (isGroupHR) {
@@ -63,29 +63,33 @@ function DevApp() {
     mockCorporates = [
       { id: '1422135', name: 'A3 Test industries' },
       { id: '1422138', name: 'ELTS Corporate' },
+      { id: '1422140', name: 'ESPN Tech Solutions' },
     ]
     mockPolicies = [
-      { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', policy_name: 'Group Health Standard', corp_id: '1422135' },
-      { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+      { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', insurer_policy_number: '900010062026_J10', internal_policy_number: 'TBA/A3/HEALTH/26', policy_name: 'Group Health Standard', corp_id: '1422135' },
+      { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', insurer_policy_number: 'EL_97238928391606', internal_policy_number: 'TBA/ELTS/CARE/26', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+      { id: '973874878387438', pol_id: '973874878387438', policy_no: 'INS_6387686843', insurer_policy_number: 'INS_6387686843', internal_policy_number: '973874878387438', policy_name: 'Corporate Health Plan', corp_id: '1422140' },
     ]
   } else if (config.role === 'broker') {
     mockCorporates = [
       { id: '1422104', name: 'Bangkok Patana School' },
       { id: '1422135', name: 'A3 Test industries' },
       { id: '1422138', name: 'ELTS Corporate' },
+      { id: '1422140', name: 'ESPN Tech Solutions' },
     ]
     mockPolicies = [
-      { id: '411932', pol_id: '411932', policy_no: 'BPS_Local_OP_16022026', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
-      { id: '411933', pol_id: '411933', policy_no: 'BPS_Local_TOPUP_16022026', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
-      { id: '411934', pol_id: '411934', policy_no: 'HS256576', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
-      { id: '411935', pol_id: '411935', policy_no: 'DEN_BPS_2026_01', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
-      { id: '411936', pol_id: '411936', policy_no: 'MAT_BPS_2026_02', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
-      { id: '411937', pol_id: '411937', policy_no: 'VIS_BPS_2026_03', policy_name: 'Vision Care Standard', corp_id: '1422104' },
-      { id: '411938', pol_id: '411938', policy_no: 'LIFE_BPS_2026_04', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
-      { id: '411939', pol_id: '411939', policy_no: 'PA_BPS_2026_05', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
-      { id: '411940', pol_id: '411940', policy_no: 'CI_BPS_2026_06', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
-      { id: '412849', pol_id: '412849', policy_no: '900010062026_J10', policy_name: 'Group Health Standard', corp_id: '1422135' },
-      { id: '412854', pol_id: '412854', policy_no: 'EL_97238928391606', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+      { id: '411932', pol_id: '411932', policy_no: 'TBA/BPS/LOCAL/26', insurer_policy_number: 'BPS_Local_OP_16022026', internal_policy_number: 'TBA/BPS/LOCAL/26', policy_name: 'Local Outpatient Plan', corp_id: '1422104' },
+      { id: '411933', pol_id: '411933', policy_no: 'TBA/BPS/TOPUP/26', insurer_policy_number: 'BPS_Local_TOPUP_16022026', internal_policy_number: 'TBA/BPS/TOPUP/26', policy_name: 'Local Top-up Plan', corp_id: '1422104' },
+      { id: '411934', pol_id: '411934', policy_no: 'TBA/BPS/HS/26', insurer_policy_number: 'HS256576', internal_policy_number: 'TBA/BPS/HS/26', policy_name: 'Hospital & Surgical', corp_id: '1422104' },
+      { id: '411935', pol_id: '411935', policy_no: 'TBA/BPS/DEN/26', insurer_policy_number: 'DEN_BPS_2026_01', internal_policy_number: 'TBA/BPS/DEN/26', policy_name: 'Executive Dental Rider', corp_id: '1422104' },
+      { id: '411936', pol_id: '411936', policy_no: 'TBA/BPS/MAT/26', insurer_policy_number: 'MAT_BPS_2026_02', internal_policy_number: 'TBA/BPS/MAT/26', policy_name: 'Maternity Benefit Tier A', corp_id: '1422104' },
+      { id: '411937', pol_id: '411937', policy_no: 'TBA/BPS/VIS/26', insurer_policy_number: 'VIS_BPS_2026_03', internal_policy_number: 'TBA/BPS/VIS/26', policy_name: 'Vision Care Standard', corp_id: '1422104' },
+      { id: '411938', pol_id: '411938', policy_no: 'TBA/BPS/LIFE/26', insurer_policy_number: 'LIFE_BPS_2026_04', internal_policy_number: 'TBA/BPS/LIFE/26', policy_name: 'Group Term Life Extended', corp_id: '1422104' },
+      { id: '411939', pol_id: '411939', policy_no: 'TBA/BPS/PA/26', insurer_policy_number: 'PA_BPS_2026_05', internal_policy_number: 'TBA/BPS/PA/26', policy_name: 'Personal Accident Plan', corp_id: '1422104' },
+      { id: '411940', pol_id: '411940', policy_no: 'TBA/BPS/CI/26', insurer_policy_number: 'CI_BPS_2026_06', internal_policy_number: 'TBA/BPS/CI/26', policy_name: 'Critical Illness Protection', corp_id: '1422104' },
+      { id: '412849', pol_id: '412849', policy_no: 'TBA/A3/HEALTH/26', insurer_policy_number: '900010062026_J10', internal_policy_number: 'TBA/A3/HEALTH/26', policy_name: 'Group Health Standard', corp_id: '1422135' },
+      { id: '412854', pol_id: '412854', policy_no: 'TBA/ELTS/CARE/26', insurer_policy_number: 'EL_97238928391606', internal_policy_number: 'TBA/ELTS/CARE/26', policy_name: 'Comprehensive Care Plan', corp_id: '1422138' },
+      { id: '973874878387438', pol_id: '973874878387438', policy_no: '973874878387438', insurer_policy_number: 'INS_6387686843', internal_policy_number: '973874878387438', policy_name: 'Corporate Health Plan', corp_id: '1422140' },
     ]
   }
 

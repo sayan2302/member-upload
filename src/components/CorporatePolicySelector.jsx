@@ -77,9 +77,29 @@ export function CorporatePolicySelector({
       if (matched.length > 0) return matched
     }
     if (corp.policy_no) {
-      return [{ policy_no: corp.policy_no, policy_name: corp.policy_name || 'Standard Plan' }]
+      return [{
+        policy_no: corp.policy_no,
+        insurer_policy_number: corp.insurer_policy_number || corp.policy_number || corp.policy_no,
+        internal_policy_number: corp.internal_policy_number || corp.policy_number || corp.policy_no,
+        policy_name: corp.policy_name || 'Standard Plan'
+      }]
     }
     return []
+  }
+
+  // Resolve policy number strictly based on role (Broker = Internal Policy No, HR = Insurer Policy No)
+  const resolvePolicyNumber = (p) => {
+    if (!p) return ''
+    if (isBroker) {
+      // Broker View: strictly Internal Policy Number
+      if (p.internal_policy_number) return p.internal_policy_number
+      // Fallback only if no explicit insurer number is defined (legacy un-tagged objects)
+      return p.insurer_policy_number ? '' : (p.policy_number || p.policy_no || '')
+    }
+    // HR View: strictly Insurer Policy Number
+    if (p.insurer_policy_number) return p.insurer_policy_number
+    // Fallback only if no explicit internal number is defined (legacy un-tagged objects)
+    return p.internal_policy_number ? '' : (p.policy_number || p.policy_no || '')
   }
 
   // Filter based on search input (checks corporate name, id, and policy numbers)
@@ -92,13 +112,23 @@ export function CorporatePolicySelector({
       const corpPolicies = getCorpPolicies(corp)
       
       const matchesCorp = name.includes(term) || id.includes(term)
-      const matchesPolicy = corpPolicies.some(p => 
-        String(p.policy_no || p.pol_id || p.id || '').toLowerCase().includes(term) ||
-        String(p.policy_name || p.plan_name || '').toLowerCase().includes(term)
-      )
+      const matchesPolicy = corpPolicies.some(p => {
+        const resolved = resolvePolicyNumber(p).toLowerCase()
+        const polNo = String(p.policy_no || p.pol_id || p.id || '').toLowerCase()
+        const internalNo = String(p.internal_policy_number || '').toLowerCase()
+        const insurerNo = String(p.insurer_policy_number || '').toLowerCase()
+        const planName = String(p.policy_name || p.plan_name || '').toLowerCase()
+        return (
+          resolved.includes(term) ||
+          polNo.includes(term) ||
+          internalNo.includes(term) ||
+          insurerNo.includes(term) ||
+          planName.includes(term)
+        )
+      })
       return matchesCorp || matchesPolicy
     })
-  }, [corporates, policies, searchTerm])
+  }, [corporates, policies, searchTerm, isBroker])
 
   const handleCopy = (text, key, customLabel) => {
     if (!text) return
@@ -205,7 +235,7 @@ export function CorporatePolicySelector({
         <div className="history-collapsible-inner">
           <p className="corporate-section-hint" style={{ margin: '0 0 14px 0', fontSize: '12px', color: '#64748b' }}>
             {isBroker
-              ? 'Copy exact company names and insurer policy numbers into your Excel template to ensure validation passes.'
+              ? 'Copy exact company names and internal policy numbers into your Excel template to ensure validation passes.'
               : 'Copy company names (Column B) and insurer policy numbers (Column C) directly into your Excel template to prevent errors.'}
           </p>
 
@@ -217,10 +247,10 @@ export function CorporatePolicySelector({
               
               // Active policy resolution
               const defaultPolicyNo = corpPolicies.length > 0
-                ? (corpPolicies[0].policy_no || corpPolicies[0].id || corpPolicies[0].pol_id || '')
+                ? resolvePolicyNumber(corpPolicies[0])
                 : ''
               const activePolicyNo = selectedPolicies[corp.id] || defaultPolicyNo
-              const activePolicy = corpPolicies.find(p => (p.policy_no || p.id || p.pol_id) === activePolicyNo) || corpPolicies[0] || null
+              const activePolicy = corpPolicies.find(p => resolvePolicyNumber(p) === activePolicyNo || (p.policy_no || p.id || p.pol_id) === activePolicyNo) || corpPolicies[0] || null
               
               const isPolCopied = copiedKey === `pol-${corp.id}-${activePolicyNo}`
               const isDropdownOpen = openDropdownCorpId === corp.id
@@ -229,9 +259,18 @@ export function CorporatePolicySelector({
               const pSearch = (policySearchTerms[corp.id] || '').toLowerCase().trim()
               const dropdownFilteredPolicies = corpPolicies.filter(p => {
                 if (!pSearch) return true
+                const resolved = resolvePolicyNumber(p).toLowerCase()
                 const no = String(p.policy_no || p.id || p.pol_id || '').toLowerCase()
+                const internalNo = String(p.internal_policy_number || '').toLowerCase()
+                const insurerNo = String(p.insurer_policy_number || '').toLowerCase()
                 const name = String(p.policy_name || p.plan_name || '').toLowerCase()
-                return no.includes(pSearch) || name.includes(pSearch)
+                return (
+                  resolved.includes(pSearch) ||
+                  no.includes(pSearch) ||
+                  internalNo.includes(pSearch) ||
+                  insurerNo.includes(pSearch) ||
+                  name.includes(pSearch)
+                )
               })
 
               return (
@@ -328,14 +367,14 @@ export function CorporatePolicySelector({
 
                             <div className="popover-list-body">
                               {dropdownFilteredPolicies.map((pol) => {
-                                const pNo = pol.policy_no || pol.id || pol.pol_id || ''
+                                const pNo = resolvePolicyNumber(pol)
                                 const pName = pol.policy_name || pol.plan_name || ''
                                 const isSelected = pNo === activePolicyNo
                                 const isRowCopied = copiedKey === `pop-${corp.id}-${pNo}`
 
                                 return (
                                   <div
-                                    key={pNo}
+                                    key={`${pol.id || pol.pol_id || ''}-${pNo}`}
                                     className={`popover-policy-row ${isSelected ? 'is-selected' : ''}`}
                                     onClick={() => {
                                       setSelectedPolicies(prev => ({ ...prev, [corp.id]: pNo }))
