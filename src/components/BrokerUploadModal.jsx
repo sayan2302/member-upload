@@ -9,6 +9,7 @@ import {
   SendIcon,
 } from './Icons.jsx'
 import { ValidationPreviewBoundary, ValidationWorksheet } from './MemberUpload.jsx'
+import { formatUserErrorMessage } from '../utils/errorSanitizer.js'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -220,7 +221,10 @@ export function BrokerUploadModal({
         }).catch(() => {})
       } catch (_) {}
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to validate the file.')
+      const friendlyMessage = formatUserErrorMessage(error, {
+        fallbackMessage: 'Unable to validate the file. Please check your file format and try again.',
+      })
+      setMessage(friendlyMessage)
       setMessageType('error')
       setValidationPassed(false)
       setValidationSummary(null)
@@ -360,7 +364,7 @@ export function BrokerUploadModal({
                   records_inserted: data.records_inserted,
                 })
               } else if (data.stage === 'error') {
-                throw new Error(data.message || 'File processing failed on the server.')
+                throw new Error(formatUserErrorMessage(data.message, { fallbackMessage: 'File processing failed on the server.' }))
               }
             } catch (err) {
               if (err.message && !err.message.includes('JSON')) {
@@ -385,7 +389,10 @@ export function BrokerUploadModal({
         })
       }, 1000)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to submit file.')
+      const friendlyMessage = formatUserErrorMessage(error, {
+        fallbackMessage: 'Unable to submit file. Please check your data and try again.',
+      })
+      setMessage(friendlyMessage)
       setMessageType('error')
       setProgressState(null)
     } finally {
@@ -688,7 +695,14 @@ export function BrokerUploadModal({
           {message && (
             <div className={`message-banner ${messageType === 'success' ? 'is-success' : 'is-error'}`}>
               <span className="message-icon">{messageType === 'success' ? <CheckCircleIcon size={18} /> : <AlertTriangleIcon size={18} />}</span>
-              <span className="message-text">{message}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span className="message-text">{message}</span>
+                {messageType === 'error' && item?.uuid && (
+                  <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 500 }}>
+                    Error Reference: #{String(item.uuid).slice(0, 8)}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

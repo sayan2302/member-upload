@@ -18,6 +18,7 @@ import { SortDropdown } from './SortDropdown.jsx'
 import { StatusFilterDropdown } from './StatusFilterDropdown.jsx'
 import { downloadFile } from '../utils/fileDownloader.js'
 import { DateRangeFilterDropdown } from './DateRangeFilterDropdown.jsx'
+import { formatUserErrorMessage } from '../utils/errorSanitizer.js'
 
 export function UploadHistory({
   corpId,
@@ -177,7 +178,7 @@ export function UploadHistory({
       setHistoryItems(items)
     } catch (err) {
       console.error('[UploadHistory] Fetch error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load upload history')
+      setError(formatUserErrorMessage(err, { fallbackMessage: 'Failed to load upload history. Please try again.' }))
     } finally {
       if (!isSilent) setIsLoading(false)
     }

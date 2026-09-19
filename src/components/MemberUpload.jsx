@@ -11,6 +11,7 @@ import { PlatformGuidePage } from './PlatformGuidePage.jsx'
 import { FileAuditConsole } from './FileAuditConsole.jsx'
 import { downloadFile } from '../utils/fileDownloader.js'
 import { formatCellDisplayValue } from '../utils/excelParser.js'
+import { formatUserErrorMessage } from '../utils/errorSanitizer.js'
 import ExcelJS from 'exceljs'
 import {
   DownloadIcon,
@@ -1038,7 +1039,10 @@ export default function MemberUpload({
         setMessageType('error')
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to validate the file. Please check file format.')
+      const friendlyMessage = formatUserErrorMessage(error, {
+        fallbackMessage: 'Unable to validate the file. Please check file format and try again.',
+      })
+      setMessage(friendlyMessage)
       setMessageType('error')
       setValidationPassed(false)
       setValidationSummary(null)
@@ -1190,7 +1194,7 @@ export default function MemberUpload({
                     records_inserted: data.records_inserted,
                   })
                 } else if (data.stage === 'error') {
-                  throw new Error(data.message || 'File processing failed on the server.')
+                  throw new Error(formatUserErrorMessage(data.message, { fallbackMessage: 'File processing failed on the server.' }))
                 }
               } catch (err) {
                 if (err.message && !err.message.includes('JSON')) {
@@ -1255,7 +1259,10 @@ export default function MemberUpload({
       setProgressState(null)
       if (inputRef.current) inputRef.current.value = ''
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to submit file. Please try again.')
+      const friendlyMessage = formatUserErrorMessage(error, {
+        fallbackMessage: 'Unable to submit file. Please check your data and try again.',
+      })
+      setMessage(friendlyMessage)
       setMessageType('error')
       setProgressState(null)
       console.error(error)
@@ -1524,7 +1531,14 @@ export default function MemberUpload({
                       <AlertTriangleIcon size={18} />
                     )}
                   </span>
-                  <span className="message-text">{message}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span className="message-text">{message}</span>
+                    {messageType === 'error' && currentFileUuid && (
+                      <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 500 }}>
+                        Error Reference: #{String(currentFileUuid).slice(0, 8)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 
