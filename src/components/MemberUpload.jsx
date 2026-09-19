@@ -544,6 +544,7 @@ export default function MemberUpload({
   const [isValidating, setIsValidating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isDownloadingRetail, setIsDownloadingRetail] = useState(false)
 
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('')
@@ -811,9 +812,18 @@ export default function MemberUpload({
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  const downloadTemplate = async () => {
-    setIsDownloading(true)
+  const downloadTemplate = async (templateType = 'standard') => {
+    const isRetail = templateType === 'retail'
+    if (isRetail) {
+      setIsDownloadingRetail(true)
+    } else {
+      setIsDownloading(true)
+    }
     setMessage('')
+
+    const downloadFileName = isRetail
+      ? 'Member_Upload_Template_BROKER_RETAIL.xlsx'
+      : `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`
 
     try {
       const validSubCorpIds = Array.isArray(corporates)
@@ -822,6 +832,9 @@ export default function MemberUpload({
 
       const params = new URLSearchParams()
       params.set('for', resolvedRole === 'broker' ? 'broker' : 'hr')
+      if (isRetail) {
+        params.set('type', 'retail')
+      }
       if (defaultCorpId && defaultCorpId !== '0') {
         params.set('corp_id', defaultCorpId)
       }
@@ -841,7 +854,7 @@ export default function MemberUpload({
       })
 
       if (!res.ok) {
-        downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
+        downloadFile(endpoint, downloadFileName)
         return
       }
 
@@ -917,17 +930,23 @@ export default function MemberUpload({
       const downloadUrl = URL.createObjectURL(enhancedBlob)
       const a = document.createElement('a')
       a.href = downloadUrl
-      a.download = `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`
+      a.download = downloadFileName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(downloadUrl)
     } catch (err) {
       console.error('[Download Template] Error:', err)
-      const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?for=${resolvedRole === 'broker' ? 'broker' : 'hr'}`
-      downloadFile(endpoint, `Member_Upload_Template_${resolvedRole.toUpperCase()}.xlsx`)
+      const fallbackEndpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?for=${resolvedRole === 'broker' ? 'broker' : 'hr'}${isRetail ? '&type=retail' : ''}`
+      downloadFile(fallbackEndpoint, downloadFileName)
     } finally {
-      setTimeout(() => setIsDownloading(false), 1500)
+      setTimeout(() => {
+        if (isRetail) {
+          setIsDownloadingRetail(false)
+        } else {
+          setIsDownloading(false)
+        }
+      }, 1500)
     }
   }
 
@@ -1424,16 +1443,31 @@ export default function MemberUpload({
 
               {/* Action Bar */}
               <div className="mup-actions">
-                <button
-                  type="button"
-                  className="template-button"
-                  onClick={downloadTemplate}
-                  disabled={isDownloading || isSubmitting}
-                  title="Download clean template"
-                >
-                  <DownloadIcon size={15} />
-                  <span>{isDownloading ? 'Preparing Template…' : 'Download Template'}</span>
-                </button>
+                <div className="template-btn-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="template-button"
+                    onClick={() => downloadTemplate('standard')}
+                    disabled={isDownloading || isDownloadingRetail || isSubmitting}
+                    aria-label="Download standard template"
+                  >
+                    <DownloadIcon size={15} />
+                    <span>{isDownloading ? 'Preparing Template…' : 'Download Template'}</span>
+                  </button>
+
+                  {resolvedRole === 'broker' && (
+                    <button
+                      type="button"
+                      className="template-button template-button--retail"
+                      onClick={() => downloadTemplate('retail')}
+                      disabled={isDownloading || isDownloadingRetail || isSubmitting}
+                      aria-label="Download Retail Template with SME Name column"
+                    >
+                      <DownloadIcon size={15} />
+                      <span>{isDownloadingRetail ? 'Preparing Retail Template…' : 'Download Retail Template'}</span>
+                    </button>
+                  )}
+                </div>
 
                 <div className="mup-primary-actions">
                   {validationPassed && !submitSuccess ? (
