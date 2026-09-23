@@ -835,15 +835,14 @@ export default function MemberUpload({
       params.set('for', resolvedRole === 'broker' ? 'broker' : 'hr')
       if (isRetail) {
         params.set('type', 'retail')
-      }
-      if (defaultCorpId && defaultCorpId !== '0') {
-        params.set('corp_id', defaultCorpId)
-      }
-      if (Array.isArray(corporates) && corporates.length > 0) {
-        params.set('corporates', JSON.stringify(corporates))
-      }
-      if (validSubCorpIds.length > 0) {
-        params.set('sub_corporate_ids', JSON.stringify(validSubCorpIds))
+        params.set('corporates', JSON.stringify([{ id: 'retail', name: 'PREMIER INTERNATIONAL HEALTHCARE' }]))
+      } else {
+        if (Array.isArray(corporates) && corporates.length > 0) {
+          params.set('corporates', JSON.stringify(corporates))
+        }
+        if (validSubCorpIds.length > 0) {
+          params.set('sub_corporate_ids', JSON.stringify(validSubCorpIds))
+        }
       }
 
       const endpoint = `${apiConfig.apiBaseUrl}/enrolment-meta/0/sample-csv?${params.toString()}`

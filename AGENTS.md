@@ -140,9 +140,19 @@ npm run build
 
 ---
 
-## 9. Verification & Code Quality Checklist
+## 10. Database Verification & Inspection Protocol (Mandatory)
+
+1. **Always Connect to Database and Inspect with Respect to the Query**:
+   - Whenever an issue, template mapping, data structure, or workflow query arises, always connect directly to the database (`intluatdb` / `Lawton` configured in `c:\ALL\OFFICE\data-exchange\.env.local`) to verify, inspect, and confirm active table schemas, rows, constraints, and mappings with respect to the user's query.
+   - Never make blind assumptions about database schemas or mapping JSON definitions; inspect active DB records (such as `dbo.enrolment_meta`, corporate tables, or audit logs) to ascertain whether a fix belongs in the DB, in the codebase, or in both.
+   - When verifying template dropdowns, corporate lists, or validation rules, execute targeted queries against the relevant tables to determine the true source of truth.
+
+---
+
+## 11. Verification & Code Quality Checklist
 
 Before completing any task:
+- [ ] Directly connect to and inspect the database whenever queries or features involve data structures, template mappings, or schema rules.
 - [ ] Run `npm run build` and ensure zero compilation errors.
 - [ ] Verify that `scripts/copy-to-portal.js` successfully updated `memberUpload.js` and `member-upload.css` in `mayfairmemberportal`.
 - [ ] Ensure all interactive buttons have custom `.broker-tooltip` elements with no native `title="..."` attributes.
