@@ -370,7 +370,9 @@ export function BrokerDashboard({
   }
 
   const handleOpenRejectModal = (item) => {
-    if (!item.uuid || processingUuid) return
+    if (!item?.uuid || processingUuid) return
+    const statusLower = String(item.status || '').toLowerCase()
+    if (statusLower === 'failed' || statusLower === 'approved' || statusLower === 'revoked' || statusLower === 'rejected') return
     setItemToReject(item)
     setSelectedPresetReason(PRESET_REASONS[0])
     setRejectionComment('')
@@ -379,6 +381,10 @@ export function BrokerDashboard({
 
   const handleConfirmReject = async () => {
     if (!itemToReject || isRejecting) return
+    if (String(itemToReject.status || '').toLowerCase() === 'failed') {
+      setRejectError('Cannot reject a file with failed status.')
+      return
+    }
     const commentTrimmed = rejectionComment.trim()
     if (!commentTrimmed) {
       setRejectError('Please enter specific rejection comments/notes for HR.')
@@ -955,9 +961,11 @@ export function BrokerDashboard({
                 </thead>
                 <tbody>
                   {sortedItems.map((item) => {
-                    const isRevoked = String(item.status || 'pending').toLowerCase() === 'revoked';
-                    const isRejected = String(item.status || 'pending').toLowerCase() === 'rejected';
-                    const isApproved = String(item.status || 'pending').toLowerCase() === 'approved';
+                    const itemStatus = String(item.status || 'pending').toLowerCase();
+                    const isRevoked = itemStatus === 'revoked';
+                    const isRejected = itemStatus === 'rejected';
+                    const isApproved = itemStatus === 'approved';
+                    const isFailed = itemStatus === 'failed';
                     const isLocked = isItemLocked(item);
                     const lockedUserId = getLockedUserId(item);
                     const isLockedByMe = isLocked && String(lockedUserId) === String(brokerId);
@@ -1038,17 +1046,12 @@ export function BrokerDashboard({
 
                             {/* ── Slot 3: Reject Action (when unlocked or locked by me) ── */}
                             <div className="broker-action-slot slot-reject">
-                              {!isRevoked && !isRejected && !isApproved && (isLockedByMe || !isLocked) && (
+                              {!isRevoked && !isRejected && !isApproved && !isFailed && (isLockedByMe || !isLocked) && (
                                 <div className="broker-icon-btn-wrap">
                                   <button
                                     type="button"
                                     className="broker-icon-btn btn-reject"
-                                    onClick={() => {
-                                      setItemToReject(item)
-                                      setRejectError('')
-                                      setRejectionComment('')
-                                      setSelectedPresetReason(PRESET_REASONS[0])
-                                    }}
+                                    onClick={() => handleOpenRejectModal(item)}
                                     disabled={processingUuid === item.uuid}
                                     aria-label="Reject Submission"
                                   >
