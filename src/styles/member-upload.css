@@ -52,7 +52,35 @@ button {
 }
 
 .bmpu-page {
-  padding-bottom: 20px !important;
+  min-height: calc(100vh - 120px) !important;
+  padding-bottom: 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#member-upload-root {
+  flex: 1 0 auto !important;
+  width: 100% !important;
+}
+
+/* ── Legacy ASP.NET Host Footer Reset ─────────────────────────────────────── */
+/* In the host portal (app-min.css), .footer has position: fixed; bottom: 0; with no
+   z-index, causing scrollable tables and cards to overlap it on scroll.
+   Reset to position: relative so it flows naturally and cleanly below all content. */
+body .footer,
+body footer.footer,
+body.has-sidebar .footer,
+body.no-sidebar .footer,
+.footer {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  margin-top: 32px !important;
+  z-index: 10 !important;
+  background: #ffffff !important;
+  clear: both !important;
 }
 
 /* ── Main Unified Upload Card ────────────────────────────────────────────── */
