@@ -260,27 +260,6 @@ export function ValidationWorksheet({
     return allRemarks
   }
 
-  const isFieldAutoDefault = (row, column) => {
-    const fields = Array.isArray(row.fields) ? row.fields : []
-    const targetClean = cleanKey(column)
-    const targetLower = String(column || '').trim().toLowerCase()
-
-    return fields.some((item) => {
-      if (!item || !item.isAutoDefault) return false
-      const colClean = cleanKey(item.colMapping)
-      const nameClean = cleanKey(item.fieldName)
-      const colLower = String(item.colMapping || '').trim().toLowerCase()
-      const nameLower = String(item.fieldName || '').trim().toLowerCase()
-
-      return (
-        colClean === targetClean ||
-        nameClean === targetClean ||
-        colLower === targetLower ||
-        nameLower === targetLower
-      )
-    })
-  }
-
   const worksheetContent = (
     <section 
       className={`upload-card validation-panel ${isCollapsed && !isFullscreen ? 'is-card-collapsed' : ''} ${isFullscreen ? 'is-fullscreen' : ''}`} 
@@ -389,7 +368,6 @@ export function ValidationWorksheet({
                         {columns.map((column) => {
                           const issues = getFieldIssues(row, column)
                           const hasIssue = issues.length > 0
-                          const isAutoDefault = isFieldAutoDefault(row, column)
                           const rawCellValue = row.values?.[column]
                           const cellValue = formatCellDisplayValue(rawCellValue, column)
                           const isValueEmpty = cellValue === undefined || cellValue === null || String(cellValue).trim() === ''
@@ -418,15 +396,6 @@ export function ValidationWorksheet({
                                 <span className={`cell-text ${isValueEmpty && hasIssue ? 'cell-empty' : ''}`}>
                                   {isValueEmpty ? (hasIssue ? '(empty)' : '—') : String(cellValue)}
                                 </span>
-                                {isAutoDefault && (
-                                  <div className="broker-icon-btn-wrap auto-default-badge-wrap">
-                                    <span className="auto-default-badge">Auto Default</span>
-                                    <div className="broker-tooltip">
-                                      <span className="tooltip-title">System Default Applied</span>
-                                      <span className="tooltip-desc">Populated from DEFAULT_SME_NAME configuration.</span>
-                                    </div>
-                                  </div>
-                                )}
                                 {hasIssue && <span className="cell-error-corner cell-error-triangle" />}
                               </div>
                             </td>
